@@ -102,6 +102,8 @@
                 }).fire({
                     icon: "success",
                     title: "Signed in successfully"
+                }).then(() => {
+                    window.location.href = "../index.php"
                 })
             } else {
                 Swal.fire({
@@ -126,10 +128,10 @@
         
         if (passwordInput.type === 'password') {
             passwordInput.type = 'text'
-            icon.classList.replace('fa-eye', 'fa-eye-slash')
+            icon.classList.replace('fa-eye-slash', 'fa-eye')
         } else {
             passwordInput.type = 'password'
-            icon.classList.replace('fa-eye-slash', 'fa-eye')
+            icon.classList.replace('fa-eye', 'fa-eye-slash')
         }
     }
 </script>
