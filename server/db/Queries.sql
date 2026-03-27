@@ -5,6 +5,7 @@ CREATE TABLE att_track_users (
 	middleName NVARCHAR(50),
 	employee_id NVARCHAR(30),
 	biometrics_id NVARCHAR(20),
+    gmail NVARCHAR(255),
     password NVARCHAR(MAX) NOT NULL,
 	position NVARCHAR(50)
 )
@@ -12,5 +13,5 @@ CREATE TABLE att_track_users (
 CREATE TABLE att_track_restrictions (
     id INT PRIMARY KEY IDENTITY(1,1),
     biometrics_id NVARCHAR(20),
-
+    role NVARCHAR(20)
 )

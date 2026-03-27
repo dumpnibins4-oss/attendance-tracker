@@ -1,9 +1,16 @@
+
+<?php
+    session_start();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="../css/styles.css" />
     <title>Attendance Tracker | Login</title>
 </head>
@@ -17,15 +24,25 @@
                 <p class="text-sm text-black/50">Enter your login credentials to continue</p>
             </div>
 
-            <form action="" class="flex flex-col items-start justify-start w-full h-auto gap-4">
+            <!-- LOGIN FORM -->
+            <form id="login-form" class="flex flex-col items-start justify-start w-full h-auto gap-4">
                 <div class="w-full h-auto flex flex-col items-start justify-center gap-1">
                     <label for="biometricsID" class="text-sm text-black/50 font-medium ml-2 uppercase tracking-wide">Biometrics ID</label>
-                    <input type="text" id="biometricsID" class="h-11 w-full border border-black/10 rounded-xl pl-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Eg. 21312" required />
+                    <input type="text" id="biometricsID" name="biometricsID" class="h-11 w-full border border-black/10 rounded-xl pl-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Eg. 21312" required />
                 </div>
                 
                 <div class="w-full h-auto flex flex-col items-start justify-center gap-1">
                     <label for="password" class="text-sm text-black/50 font-medium ml-2 uppercase tracking-wide">Password</label>
-                    <input type="password" id="password" class="h-11 w-full border border-black/10 rounded-xl pl-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="•••••••••" required />
+                    <div class="flex flex-row items-center justify-start w-full h-11 focus-within:ring-2 focus-within:ring-blue-500 border border-black/10 rounded-xl pl-4 transition-all overflow-hidden">
+                        <input type="password" id="password" name="password" class="focus:outline-none h-full flex-1" placeholder="•••••••••" required />
+                        <button
+                            type="button"
+                            class="h-11 w-11"
+                            onclick="togglePassword()"
+                        >
+                            <i id="toggleIcon" class="fa-slab fa-regular fa-eye-slash"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="w-full h-auto flex flex-row items-center justify-between text-sm px-2">
@@ -51,7 +68,7 @@
 
                 <div class="absolute inset-[-1000%] animate-[spin_3s_linear_infinite] bg-[conic-gradient(#4285F4,#EA4335,#FBBC05,#34A853,#4285F4)] opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 
-                <button type="button" class="relative w-full h-full bg-white rounded-[calc(1rem-1.5px)] flex items-center justify-center gap-3 hover:bg-gray-50 transition-all active:scale-95 cursor-pointer z-10">
+                <button type="submit" class="relative w-full h-full bg-white rounded-[calc(1rem-1.5px)] flex items-center justify-center gap-3 hover:bg-gray-50 transition-all active:scale-95 cursor-pointer z-10">
                     <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" class="w-5 h-5" alt="Google">
                     <span class="text-sm font-semibold text-black/70">Continue with Google</span>
                 </button>
@@ -60,3 +77,59 @@
     </div>
 </body>
 </html>
+
+<script>
+    document.getElementById('login-form').addEventListener('submit', async function (e) {
+        e.preventDefault()
+
+        try {
+            const res = await fetch("../../server/api/login_api.php", {
+                method: "POST",
+                body: new FormData(this),
+            })
+            const data = await res.json()
+            if (data.success) {
+                Swal.mixin({
+                    toast: true,
+                    position: "top-end",
+                    showConfirmButton: false,
+                    timer: 1000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.onmouseenter = Swal.stopTimer;
+                        toast.onmouseleave = Swal.resumeTimer;
+                    }
+                }).fire({
+                    icon: "success",
+                    title: "Signed in successfully"
+                })
+            } else {
+                Swal.fire({
+                    title: "Error!",
+                    text: data.message,
+                    icon: "error"
+                })
+            }
+        } catch (err) {
+            Swal.fire({
+                title: "Error!",
+                text: "Something went wrong, please try again.",
+                icon: "error"
+            })
+        }
+    })
+
+    // SHOW/HIDE PASSWORD
+    function togglePassword() {
+        const passwordInput = document.getElementById('password')
+        const icon = document.getElementById('toggleIcon')
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text'
+            icon.classList.replace('fa-eye', 'fa-eye-slash')
+        } else {
+            passwordInput.type = 'password'
+            icon.classList.replace('fa-eye-slash', 'fa-eye')
+        }
+    }
+</script>
