@@ -1,13 +1,8 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
-.bg-login {
-    background-color: #F5F2EA;
-}
-
-.bg-mainp {
-    background-color: #E8EAEC;
-}
-
-body, html {
+body,
+html {
     padding: 0;
     margin: 0;
 }

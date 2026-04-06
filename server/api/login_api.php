@@ -18,7 +18,10 @@
             $user = $stmt->fetch();
 
             if ($user) {
-                if (password_verify($password, $user['password'])) {
+                $stmt = $conn->prepare("SELECT * FROM att_track_login_credentials WHERE biometrics_id = ?");
+                $stmt->execute([$biometrics_id]);
+                $login = $stmt->fetch();
+                if (password_verify($password, $login['password'])) {
                     $stmt = $conn->prepare("SELECT * FROM att_track_restrictions WHERE biometrics_id = ?");
                     $stmt->execute([$biometrics_id]);
                     $restriction = $stmt->fetch();
@@ -26,7 +29,6 @@
                     if ($restriction) {
                         $_SESSION['restriction'] = $restriction;
                         $_SESSION['current_user'] = $user;
-
                         http_response_code(200);
                         echo json_encode(['success' => true, 'message' => 'Successfully signed in!']);
                     } else {
