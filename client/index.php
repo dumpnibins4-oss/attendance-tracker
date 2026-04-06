@@ -25,6 +25,7 @@
             }
             @custom-variant dark (&:where(.dark, .dark *));
         </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
         <script>
             // On page load or when changing themes, best to add inline in `head` to avoid FOUC
             document.documentElement.classList.toggle(
@@ -83,11 +84,6 @@
                 <div class="flex flex-row items-center justify-between w-full h-20">
                     <div class="flex flex-row items-center justify-start gap-3 h-full w-auto">
                         <div class="flex flex-row items-center justify-center w-auto h-10 bg-zinc-500 dark:bg-zinc-800 rounded-full px-3 py-1 gap-2">
-                            <i class="fa-regular fa-clock text-blue-500"></i>
-                            <span class="dark:text-white/50 text-white/90">Total Time Finished:</span>
-                            <span class="dark:text-white text-white/90">00hrs / 486hrs</span>
-                        </div>
-                        <div class="flex flex-row items-center justify-center w-auto h-10 bg-zinc-500 dark:bg-zinc-800 rounded-full px-3 py-1 gap-2">
                             <i class="fa-solid fa-check text-green-500"></i>
                             <span class="dark:text-white/50 text-white/90">On Time:</span>
                             <span class="dark:text-white text-white/90">94.5%</span>
@@ -104,6 +100,10 @@
                         </div>
                     </div>
                     <div class="flex flex-row items-center justify-start gap-3 h-full w-auto">
+                        <div class="flex items-center justify-center w-auto h-10 bg-zinc-800 rounded-full px-3 py-1 gap-2 shadow-md">
+                            <span class="text-white/50">Role:</span>
+                            <span class="<?= $_SESSION['restriction']['role'] === 'admin' ? 'text-red-500' : ($_SESSION['restriction']['role'] == 'user' ? 'text-blue-500' : 'text-white/90') ?>"><?php echo ucfirst($_SESSION['restriction']['role']); ?></span>
+                        </div>
                         <button class="flex items-center justify-center h-10 w-12 rounded-full bg-zinc-500 dark:bg-zinc-800 hover:bg-zinc-700 transition-all duration-300 cursor-pointer">
                             <i class="fa-regular fa-bell text-white"></i>
                         </button>
@@ -112,7 +112,11 @@
                             <div class="h-10 w-10 rounded-full bg-zinc-500 dark:bg-zinc-800"></div>
                             <div class="flex flex-col items-start justify-between w-auto h-10">
                                 <span class="text-zinc-700 dark:text-zinc-200 font-medium text-md transition-colors"><?php echo $_SESSION['current_user']['lastName'] . ', ' . $_SESSION['current_user']['firstName'] . ' ' . substr($_SESSION['current_user']['middleName'], 0, 1) . '.'; ?></span>
-                                <span class="text-zinc-500 dark:text-zinc-200 text-xs transition-colors"><?php echo ucfirst(str_replace('_', ' ', $_SESSION['restriction']['role'])); ?></span>
+                                <div class="flex flex-row items-center justify-start w-auto h-auto gap-2">
+                                    <span class="text-zinc-500 dark:text-zinc-200 text-xs transition-colors"><?php echo $_SESSION['current_user']['department']; ?></span>
+                                    <span class="text-zinc-500 dark:text-zinc-200 text-xs transition-colors">|</span>
+                                    <span class="text-zinc-500 dark:text-zinc-200 text-xs transition-colors"><?php echo ucfirst(str_replace('_', ' ', $_SESSION['current_user']['position'])); ?></span>
+                                </div>
                             </div>
                             <!-- Darkmode switch -->
                             <button id="dark-mode-toggle" class="relative inline-flex h-9 w-16 items-center rounded-full bg-gradient-to-r from-cyan-400 to-blue-400 dark:from-indigo-800 dark:to-zinc-900 transition-all duration-500 ml-4 shadow-inner hover:scale-105 active:scale-95 focus:outline-none cursor-pointer group">
