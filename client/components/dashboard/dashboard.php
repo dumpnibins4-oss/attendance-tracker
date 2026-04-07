@@ -1,20 +1,56 @@
 <?php
-    // --- PLACEHOLDER DATA (replace with DB queries later) ---
-    $hoursRendered   = 312;
-    $hoursRequired   = 600;
-    $timeIn          = '08:02 AM';
-    $timeOut         = null;
-    $hasJournalToday = false;
-    $weeklyStatus    = ['present', 'present', 'late', 'present', 'absent', 'none'];
-    $percent = min(100, round($hoursRendered / $hoursRequired * 100));
-    $remaining = $hoursRequired - $hoursRendered;
+    include_once(__DIR__ . '/../../../server/db/conn.php');
+
+    $userId = $_SESSION['current_user']['id'] ?? 0;
+
+    // Fetch user progress
+    $stmtUser = $conn->prepare("SELECT accumulated_hours, required_hours FROM att_track_users WHERE id = ?");
+    $stmtUser->execute([$userId]);
+    $uData = $stmtUser->fetch(PDO::FETCH_ASSOC);
+    $hoursRendered = floatval($uData['accumulated_hours'] ?? 0);
+    $hoursRequired = floatval($uData['required_hours'] ?? 600);
+    $percent = $hoursRequired > 0 ? min(100, round(($hoursRendered / $hoursRequired) * 100)) : 0;
+    $remaining = max(0, $hoursRequired - $hoursRendered);
+
+    // Fetch today's record
+    $stmtToday = $conn->prepare("
+        SELECT id, time_in, time_out, journal 
+        FROM att_track_attendance 
+        WHERE user_id = ? AND CAST(time_in AS DATE) = CAST(GETDATE() AS DATE)
+    ");
+    $stmtToday->execute([$userId]);
+    $todayRecord = $stmtToday->fetch(PDO::FETCH_ASSOC);
+
+    $timeIn = $todayRecord && $todayRecord['time_in'] ? (new DateTime($todayRecord['time_in']))->format('h:i A') : null;
+    $timeOut = $todayRecord && $todayRecord['time_out'] ? (new DateTime($todayRecord['time_out']))->format('h:i A') : null;
+    $hasJournalToday = $todayRecord && !empty(trim($todayRecord['journal']));
+    $journalText = $todayRecord ? ($todayRecord['journal'] ?? '') : '';
+    $todayRecordId = $todayRecord['id'] ?? 0;
+
+    // Fetch weekly status (Mon-Sat for current week)
+    $weeklyStatus = ['none', 'none', 'none', 'none', 'none', 'none'];
+    $days = ['M','T','W','Th','F','S'];
+    
+    // Approximation for this week (SQL Server)
+    $stmtWeek = $conn->prepare("
+        SELECT CAST(time_in AS DATE) as tDate, status
+        FROM att_track_attendance
+        WHERE user_id = ? AND time_in >= DATEADD(wk, DATEDIFF(wk, 0, GETDATE()), 0)
+    ");
+    $stmtWeek->execute([$userId]);
+    while ($row = $stmtWeek->fetch(PDO::FETCH_ASSOC)) {
+        $dayOfWeek = (new DateTime($row['tDate']))->format('N'); // 1 (Mon) to 7 (Sun)
+        if ($dayOfWeek >= 1 && $dayOfWeek <= 6) {
+            $weeklyStatus[$dayOfWeek - 1] = $row['status'] ?? 'present';
+        }
+    }
+
     $colors = [
         'present' => 'bg-green-500',
         'absent'  => 'bg-red-500',
         'late'    => 'bg-yellow-400',
         'none'    => 'bg-zinc-600',
     ];
-    $days = ['M','T','W','Th','F','S'];
 ?>
 
 <div class="flex flex-col items-center justify-start w-full h-full gap-5">
@@ -40,13 +76,13 @@
                 <p class="text-white text-xl font-medium">Quick Actions</p>
             </div>
             <div class="grid grid-cols-3 items-center justify-start w-full h-auto gap-3">
-                <button class="flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 bg-zinc-700 gap-2 hover:bg-zinc-600 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
+                <button onclick="navigateTo('attendance')" class="flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 bg-zinc-700 gap-2 hover:bg-zinc-600 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
                     <div class="flex flex-row items-center justify-center h-10 w-10 rounded-lg bg-zinc-600">
                         <i class="fa-solid fa-plus text-zinc-200 text-xl"></i>
                     </div>
                     <p class="text-zinc-200 text-md font-medium">Time In</p>
                 </button>
-                <button class="flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 bg-zinc-700 gap-2 hover:bg-zinc-600 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
+                <button onclick="navigateTo('attendance')" class="flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 bg-zinc-700 gap-2 hover:bg-zinc-600 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
                     <div class="flex flex-row items-center justify-center h-10 w-10 rounded-lg bg-zinc-600">
                         <i class="fa-solid fa-bowl-rice text-zinc-200 text-xl"></i>
                     </div>
@@ -227,25 +263,100 @@
                 </div>
             </div>
             <div class="flex flex-col items-center justify-start w-full h-auto gap-3">
-                <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-600 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 border-yellow-500">
-                    <div class="flex flex-col items-center justify-between">
-                        <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                            <i class="fa-solid fa-file-pen text-white text-lg"></i>
-                            <p class="text-white text-lg font-medium">Pending Entry</p>
-                            <div class="h-4 w-0 border border-white/50 rounded-full"></div>
-                            <p class="text-white/70 text-sm font-medium">What did you learn today?</p>
+                <?php if (!$timeIn): ?>
+                    <!-- Not timed in yet -->
+                    <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-600 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 border-zinc-500">
+                        <div class="flex flex-col items-center justify-between">
+                            <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
+                                <i class="fa-solid fa-lock text-white text-lg"></i>
+                                <p class="text-white text-lg font-medium">Locked</p>
+                                <div class="h-4 w-0 border border-white/50 rounded-full"></div>
+                                <p class="text-white/70 text-sm font-medium">Time In to unlock your journal</p>
+                            </div>
                         </div>
-                        <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                            <p class="text-white/70 text-sm font-medium">You have not submitted a journal entry for today yet.</p>
-                        </div>
+                        <button disabled class="flex items-center justify-center px-5 h-10 rounded-full bg-zinc-500/20 text-zinc-500 cursor-not-allowed opacity-50 gap-2">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                            <span class="font-medium text-sm">Write</span>
+                        </button>
                     </div>
-                    <button class="flex items-center justify-center px-5 h-10 rounded-full bg-accent/20 hover:bg-accent hover:scale-105 hover:shadow-lg cursor-pointer transition-all group/button gap-2">
-                        <i class="fa-solid fa-pen-to-square text-accent group-hover/button:text-white transition-all"></i>
-                        <span class="text-accent font-medium group-hover/button:text-white transition-all text-sm">Write</span>
-                    </button>
-                </div>
+                <?php else: ?>
+                    <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-600 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 <?php echo $hasJournalToday ? 'border-green-500' : 'border-yellow-500'; ?>">
+                        <div class="flex flex-col items-center justify-between">
+                            <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
+                                <i class="fa-solid <?php echo $hasJournalToday ? 'fa-check text-green-500' : 'fa-file-pen text-white'; ?> text-lg"></i>
+                                <p class="text-white text-lg font-medium"><?php echo $hasJournalToday ? 'Entry Saved' : 'Pending Entry'; ?></p>
+                                <div class="h-4 w-0 border border-white/50 rounded-full"></div>
+                                <p class="text-white/70 text-sm font-medium">What did you learn today?</p>
+                            </div>
+                            <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
+                                <p class="text-white/70 text-sm font-medium truncate w-[400px]">
+                                    <?php echo $hasJournalToday ? htmlspecialchars($journalText) : 'You have not submitted a journal entry for today yet.'; ?>
+                                </p>
+                            </div>
+                        </div>
+                        <button onclick="openJournalModal(<?php echo $todayRecordId; ?>, <?php echo htmlspecialchars(json_encode($journalText)); ?>)" class="flex items-center justify-center px-5 h-10 rounded-full bg-accent/20 hover:bg-accent hover:scale-105 hover:shadow-lg cursor-pointer transition-all group/button gap-2">
+                            <i class="fa-solid <?php echo $hasJournalToday ? 'fa-pen' : 'fa-pen-to-square'; ?> text-accent group-hover/button:text-white transition-all"></i>
+                            <span class="text-accent font-medium group-hover/button:text-white transition-all text-sm"><?php echo $hasJournalToday ? 'Edit' : 'Write'; ?></span>
+                        </button>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
         <!-- End of Journal Card -->
     </div>
 </div>
+
+<script>
+    // Journal Modal Function
+    function openJournalModal(recordId, currentText = '') {
+        Swal.fire({
+            title: 'Daily Journal',
+            input: 'textarea',
+            inputLabel: 'What did you achieve or learn today?',
+            inputValue: currentText,
+            inputPlaceholder: 'Start typing here...',
+            inputAttributes: {
+                'aria-label': 'Type your journal entry here'
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Save Entry',
+            confirmButtonColor: 'var(--color-accent)',
+            showLoaderOnConfirm: true,
+            background: document.documentElement.classList.contains('dark') ? '#27272a' : '#fff',
+            color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
+            preConfirm: async (text) => {
+                try {
+                    const fd = new FormData();
+                    fd.append('action', 'save_journal');
+                    fd.append('record_id', recordId);
+                    fd.append('journal', text);
+                    
+                    const res = await fetch('../server/api/attendance_api.php', { method: 'POST', body: fd });
+                    if (!res.ok) throw new Error(res.statusText);
+                    
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.message);
+                    return data;
+                } catch (error) {
+                    Swal.showValidationMessage(`Request failed: ${error}`);
+                }
+            },
+            allowOutsideClick: () => !Swal.isLoading()
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Saved!',
+                    text: 'Your journal entry has been saved.',
+                    timer: 1500,
+                    showConfirmButton: false,
+                    background: document.documentElement.classList.contains('dark') ? '#27272a' : '#fff',
+                    color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
+                }).then(() => {
+                    if (typeof navigateTo === "function") navigateTo("dashboard");
+                    else location.reload();
+                });
+            }
+        });
+    }
+</script>

@@ -12,7 +12,10 @@ CREATE TABLE att_track_users (
 	employee_id NVARCHAR(30),
 	biometrics_id NVARCHAR(20),
     gmail NVARCHAR(255),
-	position NVARCHAR(50)
+	position NVARCHAR(50),
+	profile_picture_url NVARCHAR(MAX),
+	required_hours DECIMAL(5, 2),
+	accumulated_hours DECIMAL(5, 2)
 )
 
 CREATE TABLE att_track_login_credentials (
@@ -25,4 +28,14 @@ CREATE TABLE att_track_restrictions (
     id INT PRIMARY KEY IDENTITY(1,1),
     biometrics_id NVARCHAR(20),
     role NVARCHAR(20)
+)
+
+CREATE TABLE att_track_attendance (
+	id INT PRIMARY KEY IDENTITY(1, 1),
+	user_id INT,
+	time_in DATETIME,
+	time_out DATETIME,
+	status VARCHAR(50),
+	hours DECIMAL(5, 2),
+	journal NVARCHAR(MAX)
 )

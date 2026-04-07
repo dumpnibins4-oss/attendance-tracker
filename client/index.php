@@ -65,7 +65,7 @@
         </script>
     </head>
     <body>
-        <div class="flex flex-row items-start justify-start w-full h-screen overflow-hidden bg-mainp dark:bg-[var(--color-dark-primary)] transition-colors duration-300">
+        <div class="flex flex-row items-start justify-start w-full h-screen bg-mainp dark:bg-[var(--color-dark-primary)] transition-colors duration-300">
             <!-- Navigation Bar -->
             <div id="navigation-bar" class="w-auto h-screen flex flex-col items-center justify-between p-5">
                 <div class="w-auto h-full flex flex-col items-center justify-center bg-zinc-500 dark:bg-zinc-800 px-5 py-8 rounded-4xl gap-5">
@@ -115,8 +115,8 @@
 
             <div class="flex flex-col items-center justify-start w-full h-full pt-5 px-5 gap-5">
                 <!-- Top Bar -->
-                <div class="flex flex-row items-center justify-between w-full h-20">
-                    <div class="flex flex-row items-center justify-start gap-3 h-full w-auto">
+                <div class="flex flex-row items-start justify-between w-full h-20">
+                    <div class="flex flex-row items-start justify-start gap-3 h-full w-auto">
                         <div class="flex flex-row items-center justify-center w-auto h-10 bg-zinc-500 dark:bg-zinc-800 rounded-full px-3 py-1 gap-2">
                             <i class="fa-solid fa-check text-green-500"></i>
                             <span class="dark:text-white/50 text-white/90">On Time:</span>
@@ -171,7 +171,7 @@
                 <!-- End of Top Bar -->
 
                 <!-- Main Content -->
-                <div id="main-content" class="flex flex-col items-center justify-start w-full h-full overflow-y-auto pb-5">
+                <div id="main-content" class="flex flex-col items-center justify-start w-full h-full pb-5">
                     <?php include_once("./components/{$currentPage}/{$currentPage}.php"); ?>
                 </div>
                 <!-- End of Main Content -->
@@ -232,6 +232,17 @@
 
                 // Swap content
                 mainContent.innerHTML = html;
+
+                // Execute any <script> tags in the loaded content (innerHTML doesn't run them)
+                mainContent.querySelectorAll('script').forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    if (oldScript.src) {
+                        newScript.src = oldScript.src;
+                    } else {
+                        newScript.textContent = oldScript.textContent;
+                    }
+                    oldScript.replaceWith(newScript);
+                });
 
                 // Update browser URL & title
                 const titles = {
