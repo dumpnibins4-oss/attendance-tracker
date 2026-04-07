@@ -57,7 +57,7 @@
         </script>
     </head>
     <body>
-        <div class="flex flex-row items-start justify-start w-screen h-screen bg-mainp dark:bg-[var(--color-dark-primary)] transition-colors duration-300">
+        <div class="flex flex-row items-start justify-start w-full h-screen overflow-hidden bg-mainp dark:bg-[var(--color-dark-primary)] transition-colors duration-300">
             <!-- Navigation Bar -->
             <div id="navigation-bar" class="w-auto h-screen flex flex-col items-center justify-between p-5">
                 <div class="w-auto h-full flex flex-col items-center justify-center bg-zinc-500 dark:bg-zinc-800 px-5 py-8 rounded-4xl gap-5">
@@ -278,7 +278,7 @@
                 color: '#fff',
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = './auth/login.php?logout=1';
+                    window.location.href = './auth/logout.php';
                 }
             });
         });

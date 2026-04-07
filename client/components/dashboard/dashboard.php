@@ -123,10 +123,17 @@
         <!-- End of OJT Progress Card -->
          
         <!-- Attendance Warning Card -->
-        <div class="w-full h-100 bg-zinc-500 dark:bg-zinc-800 rounded-4xl p-6">
+        <div class="flex flex-col items-center justify-between w-full h-100 bg-zinc-500 dark:bg-zinc-800 rounded-4xl p-6">
             <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
                 <i class="fa-solid fa-triangle-exclamation text-white text-xl"></i>
                 <p class="text-white text-xl font-medium">Tardiness & Absence Record</p>
+            </div>
+            <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
+                <div class="flex flex-col items-center justify-between w-full h-20 bg-yellow-500/10 rounded-3xl p-3 border-l-3 border-yellow-500">
+                    <div>
+
+                    </div>
+                </div>
             </div>
         </div>
     </div>
