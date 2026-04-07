@@ -48,15 +48,15 @@
                 </button>
                 <button class="flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 bg-zinc-700 gap-2 hover:bg-zinc-600 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
                     <div class="flex flex-row items-center justify-center h-10 w-10 rounded-lg bg-zinc-600">
-                        <i class="fa-solid fa-file-lines text-zinc-200 text-xl"></i>
+                        <i class="fa-solid fa-bowl-rice text-zinc-200 text-xl"></i>
                     </div>
-                    <p class="text-zinc-200 text-md font-medium">Generate Report</p>
+                    <p class="text-zinc-200 text-md font-medium">Start Lunch Break</p>
                 </button>
                 <button class="flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 bg-zinc-700 gap-2 hover:bg-zinc-600 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
                     <div class="flex flex-row items-center justify-center h-10 w-10 rounded-lg bg-zinc-600">
-                        <i class="fa-light fa-bowl-food"></i>
+                        <i class="fa-solid fa-file-lines text-zinc-200 text-xl"></i>
                     </div>
-                    <p class="text-zinc-200 text-md font-medium">Start Lunch Break</p>
+                    <p class="text-zinc-200 text-md font-medium">Generate Report</p>
                 </button>
             </div>
         </div>
@@ -123,16 +123,59 @@
         <!-- End of OJT Progress Card -->
          
         <!-- Attendance Warning Card -->
-        <div class="flex flex-col items-center justify-between w-full h-100 bg-zinc-500 dark:bg-zinc-800 rounded-4xl p-6">
+        <div class="flex flex-col items-center justify-start w-full h-90 bg-zinc-500 dark:bg-zinc-800 rounded-4xl p-6 gap-5">
             <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
                 <i class="fa-solid fa-triangle-exclamation text-white text-xl"></i>
                 <p class="text-white text-xl font-medium">Tardiness & Absence Record</p>
             </div>
-            <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                <div class="flex flex-col items-center justify-between w-full h-20 bg-yellow-500/10 rounded-3xl p-3 border-l-3 border-yellow-500">
-                    <div>
-
+            <div class="flex flex-col items-center justify-start w-full h-auto gap-3">
+                <div class="flex flex-row items-center justify-between w-full h-20 bg-red-500/10 rounded-3xl px-5 py-3 border-l-3 border-red-500">
+                    <div class="flex flex-col items-center justify-between">
+                        <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
+                            <i class="fa-solid fa-clock text-white text-lg"></i>
+                            <p class="text-white text-lg font-medium">Absent</p>
+                            <div class="h-4 w-0 border border-white/50 rounded-full"></div>
+                            <p class="text-white/70 text-sm font-medium">2024-01-01</p>
+                        </div>
+                        <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
+                            <p class="text-white/70 text-sm font-medium">You failed to report for duty.</p>
+                        </div>
                     </div>
+                    <button class="flex items-center justify-center h-10 w-10 rounded-full bg-green-500/20 hover:bg-green-500 hover:scale-105 hover:shadow-lg cursor-pointer transition-all group/button">
+                        <i class="fa-solid fa-check text-green-500 text-xl group-hover/button:text-white transition-all"></i>
+                    </button>
+                </div>
+                <div class="flex flex-row items-center justify-between w-full h-20 bg-yellow-500/10 rounded-3xl px-5 py-3 border-l-3 border-yellow-500">
+                    <div class="flex flex-col items-center justify-between">
+                        <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
+                            <i class="fa-solid fa-clock text-white text-lg"></i>
+                            <p class="text-white text-lg font-medium">Tardiness</p>
+                            <div class="h-4 w-0 border border-white/50 rounded-full"></div>
+                            <p class="text-white/70 text-sm font-medium">2024-01-01</p>
+                        </div>
+                        <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
+                            <p class="text-white/70 text-sm font-medium">You came back 19 minutes late from your lunch break.</p>
+                        </div>
+                    </div>
+                    <button class="flex items-center justify-center h-10 w-10 rounded-full bg-green-500/20 hover:bg-green-500 hover:scale-105 hover:shadow-lg cursor-pointer transition-all group/button">
+                        <i class="fa-solid fa-check text-green-500 text-xl group-hover/button:text-white transition-all"></i>
+                    </button>
+                </div>
+                <div class="flex flex-row items-center justify-between w-full h-20 bg-yellow-500/10 rounded-3xl px-5 py-3 border-l-3 border-yellow-500">
+                    <div class="flex flex-col items-center justify-between">
+                        <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
+                            <i class="fa-solid fa-clock text-white text-lg"></i>
+                            <p class="text-white text-lg font-medium">Tardiness</p>
+                            <div class="h-4 w-0 border border-white/50 rounded-full"></div>
+                            <p class="text-white/70 text-sm font-medium">2024-01-01</p>
+                        </div>
+                        <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
+                            <p class="text-white/70 text-sm font-medium">You came back 15 minutes late from your lunch break.</p>
+                        </div>
+                    </div>
+                    <button class="flex items-center justify-center h-10 w-10 rounded-full bg-green-500/20 hover:bg-green-500 hover:scale-105 hover:shadow-lg cursor-pointer transition-all group/button">
+                        <i class="fa-solid fa-check text-green-500 text-xl group-hover/button:text-white transition-all"></i>
+                    </button>
                 </div>
             </div>
         </div>
