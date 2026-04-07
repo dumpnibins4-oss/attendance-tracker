@@ -135,7 +135,21 @@
                         </button>
                         <div class="h-10 w-0 border border-zinc-300 dark:border-zinc-600 rounded-full"></div>
                         <div class="flex flex-row items-center justify-start gap-2 h-10 w-auto py-1">
-                            <div class="h-10 w-10 rounded-full bg-zinc-500 dark:bg-zinc-800"></div>
+                            <?php
+                                $topBarBioId   = $_SESSION['current_user']['biometrics_id'];
+                                $topBarPhotos  = glob(__DIR__ . '/public/assets/photos/' . $topBarBioId . '.{jpg,jpeg,png,webp,gif}', GLOB_BRACE);
+                                $topBarPhoto   = $topBarPhotos ? './public/assets/photos/' . basename($topBarPhotos[0]) . '?t=' . filemtime($topBarPhotos[0]) : null;
+                                $topBarInitials = strtoupper(substr($_SESSION['current_user']['firstName'], 0, 1) . substr($_SESSION['current_user']['lastName'], 0, 1));
+                            ?>
+                            <div id="topbar-avatar"
+                                 class="h-10 w-10 rounded-full overflow-hidden flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
+                                 style="background: linear-gradient(135deg, #f97316, #ea580c);">
+                                <?php if ($topBarPhoto): ?>
+                                    <img src="<?php echo htmlspecialchars($topBarPhoto); ?>" alt="Avatar" class="w-full h-full object-cover" />
+                                <?php else: ?>
+                                    <?php echo $topBarInitials; ?>
+                                <?php endif; ?>
+                            </div>
                             <div class="flex flex-col items-start justify-between w-auto h-10">
                                 <span class="text-zinc-700 dark:text-zinc-200 font-medium text-md transition-colors"><?php echo $_SESSION['current_user']['lastName'] . ', ' . $_SESSION['current_user']['firstName'] . ' ' . substr($_SESSION['current_user']['middleName'], 0, 1) . '.'; ?></span>
                                 <div class="flex flex-row items-center justify-start w-auto h-auto gap-2">
