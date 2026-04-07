@@ -54,9 +54,9 @@
                 </button>
                 <button class="flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 bg-zinc-700 gap-2 hover:bg-zinc-600 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
                     <div class="flex flex-row items-center justify-center h-10 w-10 rounded-lg bg-zinc-600">
-                        <i class="fa-solid fa-bullhorn text-zinc-200 text-xl"></i>
+                        <i class="fa-light fa-bowl-food"></i>
                     </div>
-                    <p class="text-zinc-200 text-md font-medium">Create Announcement</p>
+                    <p class="text-zinc-200 text-md font-medium">Start Lunch Break</p>
                 </button>
             </div>
         </div>
@@ -121,5 +121,13 @@
             </div>
         </div>
         <!-- End of OJT Progress Card -->
+         
+        <!-- Attendance Warning Card -->
+        <div class="w-full h-100 bg-zinc-500 dark:bg-zinc-800 rounded-4xl p-6">
+            <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
+                <i class="fa-solid fa-triangle-exclamation text-white text-xl"></i>
+                <p class="text-white text-xl font-medium">Tardiness & Absence Record</p>
+            </div>
+        </div>
     </div>
 </div>
