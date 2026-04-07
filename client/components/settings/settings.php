@@ -37,61 +37,6 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'gif'] as $ext) {
         </div>
     </div>
 
-    <!-- ===== Profile Hero Card ===== -->
-    <div
-        class="flex flex-row items-center w-full gap-6 bg-gradient-to-br from-zinc-700 to-zinc-800 rounded-3xl p-6 shadow-xl shadow-black/20">
-        <!-- Avatar (click to change photo) -->
-        <div class="relative flex-shrink-0 group cursor-pointer" id="avatar-wrapper" title="Click to change photo">
-            <!-- Hidden file input -->
-            <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden" />
-
-            <!-- Avatar image / initials fallback -->
-            <div id="avatar-display"
-                class="h-24 w-24 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-lg overflow-hidden transition-all duration-300"
-                style="background: linear-gradient(135deg, #f97316, #ea580c);">
-                <?php if ($photoUrl): ?>
-                    <img id="avatar-img" src="<?php echo htmlspecialchars($photoUrl); ?>" alt="Profile Photo"
-                        class="w-full h-full object-cover" />
-                <?php else: ?>
-                    <span id="avatar-initials"><?php echo $initials; ?></span>
-                <?php endif; ?>
-            </div>
-
-            <!-- Hover overlay -->
-            <div class="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200
-                        flex flex-col items-center justify-center gap-1 pointer-events-none">
-                <i class="fa-solid fa-camera text-white text-lg"></i>
-                <span class="text-white text-[10px] font-medium">Change</span>
-            </div>
-
-            <!-- Upload progress ring (shown during upload) -->
-            <svg id="upload-ring" class="absolute inset-0 h-24 w-24 hidden" viewBox="0 0 96 96">
-                <circle cx="48" cy="48" r="44" fill="none" stroke="#f97316" stroke-width="4" stroke-dasharray="276.46"
-                    stroke-dashoffset="276.46" stroke-linecap="round" transform="rotate(-90 48 48)"
-                    id="upload-ring-circle" style="transition:stroke-dashoffset 0.3s ease;" />
-            </svg>
-        </div>
-        <!-- Info -->
-        <div class="flex flex-col gap-1 flex-1 min-w-0">
-            <p class="text-white font-bold text-xl leading-tight truncate"><?php echo htmlspecialchars($fullName); ?>
-            </p>
-            <p class="text-zinc-300 text-sm"><?php echo htmlspecialchars($u['position'] ?? '—'); ?> &nbsp;·&nbsp;
-                <?php echo htmlspecialchars($u['department'] ?? '—'); ?></p>
-            <div class="flex flex-row items-center gap-2 mt-1 flex-wrap">
-                <span class="px-3 py-0.5 rounded-full text-xs font-semibold"
-                    style="background-color:<?php echo $roleColor; ?>22; color:<?php echo $roleColor; ?>; border:1px solid <?php echo $roleColor; ?>55;">
-                    <?php echo $role; ?>
-                </span>
-                <span class="px-3 py-0.5 rounded-full text-xs font-medium bg-zinc-600 text-zinc-300">
-                    ID: <?php echo htmlspecialchars($u['employee_id'] ?? '—'); ?>
-                </span>
-                <span class="px-3 py-0.5 rounded-full text-xs font-medium bg-zinc-600 text-zinc-300">
-                    Biometrics: <?php echo htmlspecialchars($u['biometrics_id'] ?? '—'); ?>
-                </span>
-            </div>
-        </div>
-    </div>
-
     <!-- ===== Info Grid ===== -->
     <div class="grid grid-cols-2 w-full h-auto gap-5">
 
@@ -104,6 +49,61 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'gif'] as $ext) {
                 <p class="text-white text-lg font-semibold">Personal Information</p>
             </div>
             <div class="flex flex-col gap-3">
+
+                <!-- Profile Header: Avatar + Name/Badges -->
+                <div class="flex flex-row items-center gap-4 pb-3 border-b border-white/10">
+                    <!-- Hidden file input -->
+                    <input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp,image/gif"
+                        class="hidden" />
+
+                    <!-- Avatar wrapper -->
+                    <div class="relative flex-shrink-0 group cursor-pointer" id="avatar-wrapper"
+                        title="Click to change photo">
+                        <!-- Avatar circle -->
+                        <div id="avatar-display"
+                            class="h-20 w-20 rounded-full flex items-center justify-center text-white font-bold text-2xl shadow-lg overflow-hidden transition-all duration-300"
+                            style="background: linear-gradient(135deg, #f97316, #ea580c);">
+                            <?php if ($photoUrl): ?>
+                                <img id="avatar-img" src="<?php echo htmlspecialchars($photoUrl); ?>" alt="Profile Photo"
+                                    class="w-full h-full object-cover" />
+                            <?php else: ?>
+                                <span id="avatar-initials"><?php echo $initials; ?></span>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Hover overlay -->
+                        <div class="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200
+                                    flex flex-col items-center justify-center gap-1 pointer-events-none">
+                            <i class="fa-solid fa-camera text-white text-lg"></i>
+                            <span class="text-white text-[10px] font-medium">Change</span>
+                        </div>
+
+                        <!-- Upload progress ring -->
+                        <svg id="upload-ring" class="absolute inset-0 h-20 w-20 hidden" viewBox="0 0 80 80">
+                            <circle cx="40" cy="40" r="36" fill="none" stroke="#f97316" stroke-width="4"
+                                stroke-dasharray="226.19" stroke-dashoffset="226.19" stroke-linecap="round"
+                                transform="rotate(-90 40 40)" id="upload-ring-circle"
+                                style="transition:stroke-dashoffset 0.3s ease;" />
+                        </svg>
+                    </div>
+
+                    <!-- Name + badges -->
+                    <div class="flex flex-col gap-1 flex-1 min-w-0">
+                        <p class="text-white font-bold text-lg leading-tight truncate">
+                            <?php echo htmlspecialchars($fullName); ?></p>
+                        <p class="text-zinc-400 text-sm"><?php echo htmlspecialchars($u['position'] ?? '—'); ?>
+                            &nbsp;·&nbsp; <?php echo htmlspecialchars($u['department'] ?? '—'); ?></p>
+                        <div class="flex flex-row items-center gap-2 mt-1 flex-wrap">
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+                                style="background-color:<?php echo $roleColor; ?>22; color:<?php echo $roleColor; ?>; border:1px solid <?php echo $roleColor; ?>55;">
+                                <?php echo $role; ?>
+                            </span>
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-zinc-600 text-zinc-300">
+                                ID: <?php echo htmlspecialchars($u['employee_id'] ?? '—'); ?>
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Full Name -->
                 <div class="flex flex-col gap-1">
@@ -151,7 +151,7 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'gif'] as $ext) {
         </div>
 
         <!-- Right Column -->
-        <div class="flex flex-col w-full gap-5">
+        <div class="flex flex-col w-full gap-3">
 
             <!-- Work / Account Information Card -->
             <div class="flex flex-col w-full h-auto bg-zinc-500 dark:bg-zinc-800 rounded-3xl p-6 gap-4">
@@ -193,14 +193,16 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'gif'] as $ext) {
                             <label class="text-zinc-400 text-xs uppercase tracking-wide">Employee ID</label>
                             <div class="bg-zinc-600 dark:bg-zinc-700 rounded-xl px-4 py-3">
                                 <p class="text-white text-sm font-mono">
-                                    <?php echo htmlspecialchars($u['employee_id'] ?? '—'); ?></p>
+                                    <?php echo htmlspecialchars($u['employee_id'] ?? '—'); ?>
+                                </p>
                             </div>
                         </div>
                         <div class="flex flex-col gap-1">
                             <label class="text-zinc-400 text-xs uppercase tracking-wide">Biometrics ID</label>
                             <div class="bg-zinc-600 dark:bg-zinc-700 rounded-xl px-4 py-3">
                                 <p class="text-white text-sm font-mono">
-                                    <?php echo htmlspecialchars($u['biometrics_id'] ?? '—'); ?></p>
+                                    <?php echo htmlspecialchars($u['biometrics_id'] ?? '—'); ?>
+                                </p>
                             </div>
                         </div>
                     </div>
