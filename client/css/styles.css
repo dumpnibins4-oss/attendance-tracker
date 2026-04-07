@@ -6,3 +6,90 @@ html {
     padding: 0;
     margin: 0;
 }
+
+/* ── SPA Page Transitions ── */
+#main-content {
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/* ── Scrollbar Styling ── */
+#main-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+#main-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#main-content::-webkit-scrollbar-thumb {
+    background-color: rgba(161, 161, 170, 0.3);
+    border-radius: 999px;
+}
+
+#main-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(161, 161, 170, 0.5);
+}
+
+/* ── Nav Button Tooltip ── */
+.nav-btn {
+    position: relative;
+}
+
+.nav-btn::after {
+    content: attr(title);
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 50%;
+    transform: translateY(-50%) scale(0.9);
+    background: #27272a;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 50;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.nav-btn::before {
+    content: '';
+    position: absolute;
+    left: calc(100% + 6px);
+    top: 50%;
+    transform: translateY(-50%);
+    border: 5px solid transparent;
+    border-right-color: #27272a;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 50;
+}
+
+.nav-btn:hover::after {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+}
+
+.nav-btn:hover::before {
+    opacity: 1;
+}
+
+/* ── Page content fade-in animation ── */
+.page-content {
+    animation: fadeSlideIn 0.3s ease forwards;
+}
+
+@keyframes fadeSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
