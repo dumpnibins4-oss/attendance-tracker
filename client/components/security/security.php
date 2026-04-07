@@ -2,7 +2,7 @@
     <!-- Page Header -->
     <div class="flex flex-col items-start justify-start w-full h-auto">
         <div class="flex flex-row items-center justify-start w-full h-auto">
-            <h1 class="text-3xl font-bold text-orange-500">Security</h1>
+            <h1 class="text-3xl font-bold text-accent">Security</h1>
         </div>
         <div class="flex flex-row items-center justify-start w-full h-auto gap-2">
             <p class="text-sm text-zinc-500 dark:text-zinc-400">
@@ -35,7 +35,7 @@
                     <label class="text-zinc-300 text-sm">Confirm Password</label>
                     <input type="password" placeholder="Confirm new password" class="w-full bg-zinc-600 dark:bg-zinc-700 text-white rounded-xl px-4 py-3 outline-none text-sm placeholder-zinc-400 focus:ring-2 focus:ring-orange-500 transition-all" />
                 </div>
-                <button class="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 rounded-xl transition-all hover:scale-[1.02] cursor-pointer mt-2 shadow-lg shadow-orange-500/20">
+                <button class="w-full bg-accent hover:bg-accent-hover text-white font-medium py-3 rounded-xl transition-all hover:scale-[1.02] cursor-pointer mt-2 shadow-lg shadow-accent/20">
                     Update Password
                 </button>
             </div>

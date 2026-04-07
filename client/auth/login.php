@@ -13,6 +13,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="../css/styles.css" />
     <title>Attendance Tracker | Login</title>
+    <style type="text/tailwindcss">
+        @import "tailwindcss";
+        @theme {
+            --color-mainp: #E8EAEC;
+            --color-login: #F5F2EA;
+            --color-dark-primary: #1C1C1C;
+            --color-accent: var(--accent-color, #f97316);
+            --color-accent-hover: var(--accent-color-hover, #ea580c);
+        }
+        @custom-variant dark (&:where(.dark, .dark *));
+    </style>
 </head>
 <body>
     <div class="h-screen w-screen flex flex-col items-center justify-center bg-mainp">        
@@ -21,7 +32,7 @@
                 <div class="w-auto h-auto flex items-center justify-center">
                     <img src="../public/assets/images/logo.png" alt="logo" class="h-8 w-auto" />
                 </div>
-                <h1 class="text-3xl font-bold font-sans text-orange-500">Agent Login</h1>
+                <h1 class="text-3xl font-bold font-sans text-accent">Agent Login</h1>
                 <p class="text-sm text-white/50">Enter your login credentials to continue</p>
             </div>
 
@@ -55,7 +66,7 @@
                     </div>
                 </div>
 
-                <button type="submit" class="w-full h-12 bg-orange-500 rounded-2xl text-white font-bold cursor-pointer hover:scale-105 hover:bg-orange-600 hover:shadow-lg transition-all active:scale-95">
+                <button type="submit" class="w-full h-12 bg-accent rounded-2xl text-white font-bold cursor-pointer hover:scale-105 hover:bg-accent-hover hover:shadow-lg transition-all active:scale-95">
                     Sign In
                 </button>
             </form>
@@ -80,7 +91,13 @@
     </div>
 </body>
 </html>
-
+<script>
+    // Set accent color from localStorage
+    const accentBase = localStorage.accent || '#f97316'; // Default orange-500
+    const accentHover = localStorage.accentHover || '#ea580c'; // Default orange-600
+    document.documentElement.style.setProperty('--accent-color', accentBase);
+    document.documentElement.style.setProperty('--accent-color-hover', accentHover);
+</script>
 <script>
     document.getElementById('login-form').addEventListener('submit', async function (e) {
         e.preventDefault()

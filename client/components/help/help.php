@@ -2,7 +2,7 @@
     <!-- Page Header -->
     <div class="flex flex-col items-start justify-start w-full h-auto">
         <div class="flex flex-row items-center justify-start w-full h-auto">
-            <h1 class="text-3xl font-bold text-orange-500">Help & Support</h1>
+            <h1 class="text-3xl font-bold text-accent">Help & Support</h1>
         </div>
         <div class="flex flex-row items-center justify-start w-full h-auto gap-2">
             <p class="text-sm text-zinc-500 dark:text-zinc-400">
@@ -54,8 +54,8 @@
         </div>
         <div class="grid grid-cols-3 gap-4">
             <div class="flex flex-col items-center justify-center bg-zinc-600 dark:bg-zinc-700 rounded-2xl p-5 gap-3 hover:scale-105 transition-all cursor-pointer">
-                <div class="flex items-center justify-center w-12 h-12 rounded-full bg-orange-500/20">
-                    <i class="fa-solid fa-envelope text-orange-400 text-lg"></i>
+                <div class="flex items-center justify-center w-12 h-12 rounded-full bg-accent/20">
+                    <i class="fa-solid fa-envelope text-accent-hover text-lg"></i>
                 </div>
                 <p class="text-white text-sm font-medium">Email</p>
                 <p class="text-zinc-400 text-xs">support@company.com</p>
