@@ -26,9 +26,9 @@
     <!-- Page Header -->
     <div class="flex flex-col items-start justify-start w-full h-auto">
         <div class="flex flex-row items-center justify-between w-full h-auto">
-            <h1 class="text-3xl font-bold text-orange-500">Attendance</h1>
+            <h1 class="text-3xl font-bold text-accent">Attendance</h1>
             <div class="flex flex-row items-center gap-3">
-                <button class="flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium transition-all hover:scale-105 cursor-pointer shadow-lg shadow-orange-500/20">
+                <button class="flex items-center gap-2 px-4 py-2 rounded-full bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-all hover:scale-105 cursor-pointer shadow-lg shadow-accent/20">
                     <i class="fa-solid fa-file-export"></i>
                     Export
                 </button>
