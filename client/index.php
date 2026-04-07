@@ -25,6 +25,31 @@
         'help'       => 'Attendance Tracker | Help & Support',
         'settings'   => 'Attendance Tracker | Settings',
     ];
+
+    // --- Fetch Attendance Stats for Top Bar ---
+    include_once(__DIR__ . '/../server/db/conn.php');
+    $userId = $_SESSION['current_user']['id'] ?? 0;
+    
+    $stmtStats = $conn->prepare("
+        SELECT 
+            SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as presents,
+            SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as lates,
+            SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absents
+        FROM att_track_attendance
+        WHERE user_id = ?
+    ");
+    $stmtStats->execute([$userId]);
+    $stats = $stmtStats->fetch(PDO::FETCH_ASSOC);
+
+    $totalPresents = (int)($stats['presents'] ?? 0);
+    $totalLates    = (int)($stats['lates'] ?? 0);
+    $totalAbsents  = (int)($stats['absents'] ?? 0);
+    $totalDays     = $totalPresents + $totalLates + $totalAbsents;
+
+    // Calculate On Time %
+    // Assuming 'present' means on time. If they have 0 days, default to 100%.
+    $onTimePercent = $totalDays > 0 ? round(($totalPresents / $totalDays) * 100, 1) : 100;
+
 ?>
 
 <!DOCTYPE html>
@@ -68,7 +93,7 @@
         <div class="flex flex-row items-start justify-start w-full h-screen bg-mainp dark:bg-[var(--color-dark-primary)] transition-colors duration-300">
             <!-- Navigation Bar -->
             <div id="navigation-bar" class="w-auto h-screen flex flex-col items-center justify-between p-5">
-                <div class="w-auto h-full flex flex-col items-center justify-center bg-zinc-500 dark:bg-zinc-800 px-5 py-8 rounded-4xl gap-5">
+                <div class="w-auto h-full flex flex-col items-center justify-center bg-white dark:bg-zinc-800 px-5 py-8 rounded-4xl gap-5">
                     <div class="flex items-center justify-center h-10 w-10">
                         <img src="./public/assets/images/logo.png" alt="logo" class="h-auto w-10" />
                     </div>
@@ -120,22 +145,21 @@
                         <div class="flex flex-row items-center justify-center w-auto h-10 bg-zinc-500 dark:bg-zinc-800 rounded-full px-3 py-1 gap-2">
                             <i class="fa-solid fa-check text-green-500"></i>
                             <span class="dark:text-white/50 text-white/90">On Time:</span>
-                            <span class="dark:text-white text-white/90">94.5%</span>
+                            <span class="dark:text-white text-white/90"><?php echo $onTimePercent; ?>%</span>
                         </div>
                         <div class="flex flex-row items-center justify-center w-auto h-10 bg-zinc-500 dark:bg-zinc-800 rounded-full px-3 py-1 gap-2">
                             <i class="fa-solid fa-triangle-exclamation text-yellow-500"></i>
                             <span class="dark:text-white/50 text-white/90">Late/s:</span>
-                            <span class="dark:text-white text-white/90">5</span>
+                            <span class="dark:text-white text-white/90"><?php echo $totalLates; ?></span>
                         </div>
                         <div class="flex flex-row items-center justify-center w-auto h-10 bg-zinc-500 dark:bg-zinc-800 rounded-full px-3 py-1 gap-2">
                             <i class="fa-solid fa-skull text-red-500"></i>
                             <span class="dark:text-white/50 text-white/90">Absent/s:</span>
-                            <span class="dark:text-white text-white/90">5</span>
+                            <span class="dark:text-white text-white/90"><?php echo $totalAbsents; ?></span>
                         </div>
                     </div>
                     <div class="flex flex-row items-center justify-start gap-3 h-full w-auto">
                         <div class="flex items-center justify-center w-auto h-10 bg-zinc-800 rounded-full px-3 py-1 gap-2 shadow-md">
-                            <span class="text-white/50">Role:</span>
                             <span class="<?= $_SESSION['restriction']['role'] === 'admin' ? 'text-red-500' : ($_SESSION['restriction']['role'] == 'user' ? 'text-blue-500' : 'text-white/90') ?>"><?php echo ucfirst($_SESSION['restriction']['role']); ?></span>
                         </div>
                         <button class="flex items-center justify-center h-10 w-12 rounded-full bg-zinc-500 dark:bg-zinc-800 hover:bg-zinc-700 transition-all duration-300 cursor-pointer">
@@ -243,6 +267,11 @@
                     }
                     oldScript.replaceWith(newScript);
                 });
+                setTimeout(() => {
+                    if (typeof window.initTrackers === 'function') {
+                        window.initTrackers();
+                    }
+                }, 50);
 
                 // Update browser URL & title
                 const titles = {

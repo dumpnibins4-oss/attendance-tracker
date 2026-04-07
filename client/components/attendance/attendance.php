@@ -79,13 +79,15 @@
                     <i class="fa-solid fa-search text-zinc-400 text-sm"></i>
                     <input type="text" placeholder="Search record..." class="bg-transparent text-white text-sm outline-none placeholder-zinc-400/80 w-40" />
                 </div>
-                <div class="relative flex items-center">
-                    <select class="appearance-none bg-zinc-600 dark:bg-zinc-700/50 text-white text-sm rounded-full pl-5 pr-10 py-2 border border-white/5 shadow-inner outline-none hover:border-accent/40 cursor-pointer transition-colors duration-300">
-                        <option class="bg-zinc-700 max-w-full">This Week</option>
-                        <option class="bg-zinc-700">This Month</option>
-                        <option class="bg-zinc-700">All Time</option>
+                <div class="relative flex items-center group">
+                    <select class="appearance-none bg-zinc-600 dark:bg-zinc-800 text-white text-sm font-medium rounded-full pl-5 pr-11 py-2.5 border border-white/10 shadow-[0_2px_10px_rgba(0,0,0,0.2)] focus:ring-2 focus:ring-accent focus:border-accent outline-none hover:border-accent/60 hover:shadow-accent/10 hover:bg-zinc-500 cursor-pointer transition-all duration-300">
+                        <option class="bg-zinc-700 text-white font-medium" value="week">This Week</option>
+                        <option class="bg-zinc-700 text-white font-medium" value="month">This Month</option>
+                        <option class="bg-zinc-700 text-white font-medium" value="all">All Time</option>
                     </select>
-                    <i class="fa-solid fa-chevron-down absolute right-4 text-zinc-400 text-xs pointer-events-none"></i>
+                    <div class="absolute right-3 pointer-events-none w-6 h-6 flex items-center justify-center rounded-full bg-white/5 group-hover:bg-accent/20 transition-colors duration-300">
+                        <i class="fa-solid fa-chevron-down text-zinc-400 group-hover:text-accent transition-colors duration-300 text-[10px]"></i>
+                    </div>
                 </div>
 
                 <!-- Lunch Break Button -->
@@ -352,7 +354,7 @@
     // ── Timer ──
     let timerInterval = null;
 
-    function initTrackers() {
+    window.initTrackers = function() {
         const trackers = document.querySelectorAll('.tracker-timer');
         if (trackers.length === 0) return;
 
@@ -553,6 +555,9 @@
         });
     }
 
-    // Initialize timer on page load
-    initTrackers();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initTrackers);
+    } else {
+        initTrackers();
+    }
 </script>

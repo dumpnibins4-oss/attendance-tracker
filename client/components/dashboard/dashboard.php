@@ -70,41 +70,41 @@
     </div>
     <div class="grid grid-cols-2 w-full h-auto gap-5">
         <!-- Quick Actions -->
-        <div class="flex flex-col items-center justify-between w-full h-40 bg-zinc-500 dark:bg-zinc-800 rounded-4xl p-6 gap-3">
+        <div class="flex flex-col items-center justify-between w-full h-40 bg-white dark:bg-zinc-800 rounded-4xl p-6 gap-3">
             <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                <i class="fa-solid fa-computer-mouse text-white text-xl"></i>
-                <p class="text-white text-xl font-medium">Quick Actions</p>
+                <i class="fa-solid fa-computer-mouse text-zinc-900 dark:text-white text-xl"></i>
+                <p class="text-zinc-900 dark:text-white text-xl font-medium">Quick Actions</p>
             </div>
             <div class="grid grid-cols-3 items-center justify-start w-full h-auto gap-3">
-                <button onclick="navigateTo('attendance')" class="flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 bg-zinc-700 gap-2 hover:bg-zinc-600 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
-                    <div class="flex flex-row items-center justify-center h-10 w-10 rounded-lg bg-zinc-600">
-                        <i class="fa-solid fa-plus text-zinc-200 text-xl"></i>
+                <button onclick="navigateTo('attendance')" class="group flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 dark:bg-zinc-700 bg-zinc-200 gap-2 dark:hover:bg-zinc-600 hover:bg-zinc-300 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
+                    <div class="flex flex-row items-center justify-center h-10 w-10 rounded-lg dark:bg-zinc-600 bg-zinc-300 group-hover:bg-zinc-400 dark:group-hover:bg-zinc-500 transition-all">
+                        <i class="fa-solid fa-plus dark:text-zinc-200 text-zinc-900 text-xl"></i>
                     </div>
-                    <p class="text-zinc-200 text-md font-medium">Time In</p>
+                    <p class="dark:text-zinc-200 text-zinc-900 text-md font-medium">Time In</p>
                 </button>
-                <button onclick="navigateTo('attendance')" class="flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 bg-zinc-700 gap-2 hover:bg-zinc-600 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
-                    <div class="flex flex-row items-center justify-center h-10 w-10 rounded-lg bg-zinc-600">
-                        <i class="fa-solid fa-bowl-rice text-zinc-200 text-xl"></i>
+                <button onclick="navigateTo('attendance')" class="group flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 dark:bg-zinc-700 bg-zinc-200 gap-2 dark:hover:bg-zinc-600 hover:bg-zinc-300 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
+                    <div class="flex flex-row items-center justify-center h-10 w-10 rounded-lg dark:bg-zinc-600 bg-zinc-300 group-hover:bg-zinc-400 dark:group-hover:bg-zinc-500 transition-all">
+                        <i class="fa-solid fa-bowl-rice dark:text-zinc-200 text-zinc-900 text-xl"></i>
                     </div>
-                    <p class="text-zinc-200 text-md font-medium">Start Lunch Break</p>
+                    <p class="dark:text-zinc-200 text-zinc-900 text-md font-medium">Start Lunch Break</p>
                 </button>
-                <button class="flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 bg-zinc-700 gap-2 hover:bg-zinc-600 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
-                    <div class="flex flex-row items-center justify-center h-10 w-10 rounded-lg bg-zinc-600">
-                        <i class="fa-solid fa-file-lines text-zinc-200 text-xl"></i>
+                <button class="group flex flex-row items-center justify-start h-15 w-full rounded-3xl p-3 dark:bg-zinc-700 bg-zinc-200 gap-2 dark:hover:bg-zinc-600 hover:bg-zinc-300 hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
+                    <div class="flex flex-row items-center justify-center h-10 w-10 rounded-lg dark:bg-zinc-600 bg-zinc-300 group-hover:bg-zinc-400 dark:group-hover:bg-zinc-500 transition-all">
+                        <i class="fa-solid fa-file-lines dark:text-zinc-200 text-zinc-900 text-xl"></i>
                     </div>
-                    <p class="text-zinc-200 text-md font-medium">Generate Report</p>
+                    <p class="dark:text-zinc-200 text-zinc-900 text-md font-medium">Generate Report</p>
                 </button>
             </div>
         </div>
         <!-- End of Quick Actions -->
 
         <!-- OJT Progress Card -->
-        <div class="flex flex-col items-start justify-between w-full h-40 bg-zinc-500 dark:bg-zinc-800 rounded-4xl p-6 gap-3">
+        <div class="flex flex-col items-start justify-between w-full h-40 bg-white dark:bg-zinc-800 rounded-4xl p-6 gap-3">
             <!-- Header -->
             <div class="flex flex-row items-center justify-between w-full">
                 <div class="flex flex-row items-center gap-3">
-                    <i class="fa-solid fa-clock text-white text-xl"></i>
-                    <p class="text-white text-xl font-medium">OJT Progress</p>
+                    <i class="fa-solid fa-clock text-zinc-900 dark:text-white text-xl"></i>
+                    <p class="text-zinc-900 dark:text-white text-xl font-medium">OJT Progress</p>
                 </div>
                 <?php if (!$hasJournalToday): ?>
                 <span class="text-xs bg-accent text-white px-3 py-1 rounded-full font-medium animate-pulse">
@@ -117,14 +117,14 @@
             <div class="flex flex-row items-center justify-between w-full flex-1 gap-6">
                 <!-- Hours + progress bar -->
                 <div class="flex flex-col justify-center gap-1.5">
-                    <p class="text-3xl font-bold text-white leading-none">
+                    <p class="text-3xl font-bold text-zinc-900 dark:text-white leading-none">
                         <?php echo $hoursRendered ?>
-                        <span class="text-sm font-normal text-zinc-300">/ <?php echo $hoursRequired ?> hrs</span>
+                        <span class="text-sm font-normal dark:text-zinc-300 text-zinc-900">/ <?php echo $hoursRequired ?> hrs</span>
                     </p>
                     <div class="w-44 h-2 bg-zinc-600 dark:bg-zinc-700 rounded-full overflow-hidden">
                         <div class="h-full bg-accent rounded-full" style="width: <?php echo $percent ?>%"></div>
                     </div>
-                    <p class="text-xs text-zinc-300"><?php echo $remaining ?> hrs remaining &mdash; <?php echo $percent ?>% done</p>
+                    <p class="text-xs dark:text-zinc-300 text-zinc-900"><?php echo $remaining ?> hrs remaining &mdash; <?php echo $percent ?>% done</p>
                 </div>
 
                 <!-- Divider -->
@@ -135,12 +135,12 @@
                     <!-- Today -->
                     <div class="flex flex-row items-center gap-3">
                         <div class="flex flex-row items-center gap-1.5">
-                            <i class="fa-solid fa-right-to-bracket text-zinc-300 text-xs"></i>
-                            <p class="text-white text-sm font-medium"><?php echo $timeIn ?? '—' ?></p>
+                            <i class="fa-solid fa-right-to-bracket dark:text-zinc-300 text-zinc-900 text-xs"></i>
+                            <p class="text-zinc-900 dark:text-white text-sm font-medium"><?php echo $timeIn ?? '—' ?></p>
                         </div>
                         <div class="flex flex-row items-center gap-1.5">
-                            <i class="fa-solid fa-right-from-bracket text-zinc-300 text-xs"></i>
-                            <p class="text-white text-sm font-medium"><?php echo $timeOut ?? '—' ?></p>
+                            <i class="fa-solid fa-right-from-bracket dark:text-zinc-300 text-zinc-900 text-xs"></i>
+                            <p class="text-zinc-900 dark:text-white text-sm font-medium"><?php echo $timeOut ?? '—' ?></p>
                         </div>
                     </div>
                     <!-- Weekly pills -->
@@ -149,7 +149,7 @@
                         <?php $s = $weeklyStatus[$i] ?? 'none'; ?>
                         <div class="flex flex-col items-center gap-1">
                             <div class="h-2 w-6 rounded-full <?php echo $colors[$s] ?>"></div>
-                            <p class="text-zinc-400 text-xs"><?php echo $day ?></p>
+                            <p class="dark:text-zinc-400 text-zinc-900 text-xs"><?php echo $day ?></p>
                         </div>
                         <?php endforeach; ?>
                     </div>
@@ -159,59 +159,59 @@
         <!-- End of OJT Progress Card -->
          
         <!-- Attendance Warning Card -->
-        <div class="flex flex-col items-center justify-start w-full h-90 bg-zinc-500 dark:bg-zinc-800 rounded-4xl p-6 gap-5">
+        <div class="flex flex-col items-center justify-start w-full h-90 bg-white dark:bg-zinc-800 rounded-4xl p-6 gap-5">
             <div class="flex flex-row items-center justify-between w-full h-auto">
                 <div class="flex flex-row items-center justify-start flex-1 h-auto gap-3">
-                    <i class="fa-solid fa-triangle-exclamation text-white text-xl"></i>
-                    <p class="text-white text-xl font-medium">Tardiness & Absence Record</p>
+                    <i class="fa-solid fa-triangle-exclamation text-zinc-900 dark:text-white text-xl"></i>
+                    <p class="text-zinc-900 dark:text-white text-xl font-medium">Tardiness & Absence Record</p>
                 </div>
-                <button class="text-white text-sm font-medium hover:text-accent hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
+                <button class="text-zinc-900 dark:text-white text-sm font-medium hover:text-accent hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
                     See All
                 </button>
             </div>
             <div class="flex flex-col items-center justify-start w-full h-auto gap-3">
-                <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-600 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 border-red-500">
+                <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-200 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 border-red-500">
                     <div class="flex flex-col items-center justify-between">
                         <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                            <i class="fa-solid fa-clock text-white text-lg"></i>
-                            <p class="text-white text-lg font-medium">Absent</p>
-                            <div class="h-4 w-0 border border-white/50 rounded-full"></div>
-                            <p class="text-white/70 text-sm font-medium">2024-01-01</p>
+                            <i class="fa-solid fa-clock text-zinc-900 dark:text-white text-lg"></i>
+                            <p class="text-zinc-900 dark:text-white text-lg font-medium">Absent</p>
+                            <div class="h-4 w-0 border border-zinc-900 dark:border-white/50 rounded-full"></div>
+                            <p class="dark:text-white/70 text-zinc-900 text-sm font-medium">2024-01-01</p>
                         </div>
                         <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                            <p class="text-white/70 text-sm font-medium">You failed to report for duty.</p>
+                            <p class="dark:text-white/70 text-zinc-900 text-sm font-medium">You failed to report for duty.</p>
                         </div>
                     </div>
                     <button class="flex items-center justify-center h-10 w-10 rounded-full bg-green-500/20 hover:bg-green-500 hover:scale-105 hover:shadow-lg cursor-pointer transition-all group/button">
                         <i class="fa-solid fa-check text-green-500 text-xl group-hover/button:text-white transition-all"></i>
                     </button>
                 </div>
-                <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-600 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 border-yellow-500">
+                <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-200 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 border-yellow-500">
                     <div class="flex flex-col items-center justify-between">
                         <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                            <i class="fa-solid fa-clock text-white text-lg"></i>
-                            <p class="text-white text-lg font-medium">Tardiness</p>
-                            <div class="h-4 w-0 border border-white/50 rounded-full"></div>
-                            <p class="text-white/70 text-sm font-medium">2024-01-01</p>
+                            <i class="fa-solid fa-clock text-zinc-900 dark:text-white text-lg"></i>
+                            <p class="text-zinc-900 dark:text-white text-lg font-medium">Tardiness</p>
+                            <div class="h-4 w-0 border border-zinc-900 dark:border-white/50 rounded-full"></div>
+                            <p class="dark:text-white/70 text-zinc-900 text-sm font-medium">2024-01-01</p>
                         </div>
                         <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                            <p class="text-white/70 text-sm font-medium">You came back 19 minutes late from your lunch break.</p>
+                            <p class="dark:text-white/70 text-zinc-900 text-sm font-medium">You came back 19 minutes late from your lunch break.</p>
                         </div>
                     </div>
                     <button class="flex items-center justify-center h-10 w-10 rounded-full bg-green-500/20 hover:bg-green-500 hover:scale-105 hover:shadow-lg cursor-pointer transition-all group/button">
                         <i class="fa-solid fa-check text-green-500 text-xl group-hover/button:text-white transition-all"></i>
                     </button>
                 </div>
-                <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-600 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 border-yellow-500">
+                <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-200 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 border-yellow-500">
                     <div class="flex flex-col items-center justify-between">
                         <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                            <i class="fa-solid fa-clock text-white text-lg"></i>
-                            <p class="text-white text-lg font-medium">Tardiness</p>
-                            <div class="h-4 w-0 border border-white/50 rounded-full"></div>
-                            <p class="text-white/70 text-sm font-medium">2024-01-01</p>
+                            <i class="fa-solid fa-clock text-zinc-900 dark:text-white text-lg"></i>
+                            <p class="text-zinc-900 dark:text-white text-lg font-medium">Tardiness</p>
+                            <div class="h-4 w-0 border border-zinc-900 dark:border-white/50 rounded-full"></div>
+                            <p class="dark:text-white/70 text-zinc-900 text-sm font-medium">2024-01-01</p>
                         </div>
                         <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                            <p class="text-white/70 text-sm font-medium">You came back 15 minutes late from your lunch break.</p>
+                            <p class="dark:text-white/70 text-zinc-900 text-sm font-medium">You came back 15 minutes late from your lunch break.</p>
                         </div>
                     </div>
                     <button class="flex items-center justify-center h-10 w-10 rounded-full bg-green-500/20 hover:bg-green-500 hover:scale-105 hover:shadow-lg cursor-pointer transition-all group/button">
@@ -223,27 +223,27 @@
         <!-- End of Attendance Warning Card -->
 
         <!-- Recent Activities Card -->
-        <div class="flex flex-col items-center justify-start w-full h-90 bg-zinc-500 dark:bg-zinc-800 rounded-4xl p-6 gap-5">
+        <div class="flex flex-col items-center justify-start w-full h-90 bg-white dark:bg-zinc-800 rounded-4xl p-6 gap-5">
             <div class="flex flex-row items-center justify-between w-full h-auto">
                 <div class="flex flex-row items-center justify-start flex-1 h-auto gap-3">
-                    <i class="fa-solid fa-person-walking text-white text-xl"></i>
-                    <p class="text-white text-xl font-medium">Recent Activities</p>
+                    <i class="fa-solid fa-person-walking text-zinc-900 dark:text-white text-xl"></i>
+                    <p class="text-zinc-900 dark:text-white text-xl font-medium">Recent Activities</p>
                 </div>
-                <button class="text-white text-sm font-medium hover:text-accent hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
+                <button class="text-zinc-900 dark:text-white text-sm font-medium hover:text-accent hover:scale-105 hover:shadow-lg cursor-pointer transition-all">
                     See All
                 </button>
             </div>
             <div class="flex flex-col items-center justify-start w-full h-auto gap-3">
-                <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-600 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 border-green-500">
+                <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-200 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 border-green-500">
                     <div class="flex flex-col items-center justify-between">
                         <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                            <i class="fa-solid fa-door-open text-white text-lg"></i>
-                            <p class="text-white text-lg font-medium">Time In</p>
-                            <div class="h-4 w-0 border border-white/50 rounded-full"></div>
-                            <p class="text-white/70 text-sm font-medium">Morning</p>
+                            <i class="fa-solid fa-door-open text-zinc-900 dark:text-white text-lg"></i>
+                            <p class="text-zinc-900 dark:text-white text-lg font-medium">Time In</p>
+                            <div class="h-4 w-0 border border-zinc-900 dark:border-white/50 rounded-full"></div>
+                            <p class="dark:text-white/70 text-zinc-900 text-sm font-medium">Morning</p>
                         </div>
                         <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                            <p class="text-white/70 text-sm font-medium">7 April, 2026 - 8:00 AM</p>
+                            <p class="dark:text-white/70 text-zinc-900 text-sm font-medium">7 April, 2026 - 8:00 AM</p>
                         </div>
                     </div>
                     <button class="flex items-center justify-center h-10 w-10 rounded-full bg-green-500/20 hover:bg-green-500 hover:scale-105 hover:shadow-lg cursor-pointer transition-all group/button">
@@ -255,23 +255,23 @@
         <!-- End of Recent Activities Card -->
 
         <!-- Journal Card -->
-        <div class="col-span-2 flex flex-col items-center justify-start w-full flex-1 bg-zinc-500 dark:bg-zinc-800 rounded-4xl p-6 gap-5">
+        <div class="col-span-2 flex flex-col items-center justify-start w-full flex-1 bg-white dark:bg-zinc-800 rounded-4xl p-6 gap-5">
             <div class="flex flex-row items-center justify-between w-full h-auto">
                 <div class="flex flex-row items-center justify-start flex-1 h-auto gap-3">
-                    <i class="fa-solid fa-book text-white text-xl"></i>
-                    <p class="text-white text-xl font-medium">Today's Journal</p>
+                    <i class="fa-solid fa-book text-zinc-900 dark:text-white text-xl"></i>
+                    <p class="text-zinc-900 dark:text-white text-xl font-medium">Today's Journal</p>
                 </div>
             </div>
             <div class="flex flex-col items-center justify-start w-full h-auto gap-3">
                 <?php if (!$timeIn): ?>
                     <!-- Not timed in yet -->
-                    <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-600 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 border-zinc-500">
+                    <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-200 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 border-zinc-500">
                         <div class="flex flex-col items-center justify-between">
                             <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                                <i class="fa-solid fa-lock text-white text-lg"></i>
-                                <p class="text-white text-lg font-medium">Locked</p>
-                                <div class="h-4 w-0 border border-white/50 rounded-full"></div>
-                                <p class="text-white/70 text-sm font-medium">Time In to unlock your journal</p>
+                                <i class="fa-solid fa-lock text-zinc-900 dark:text-white text-lg"></i>
+                                <p class="text-zinc-900 dark:text-white text-lg font-medium">Locked</p>
+                                <div class="h-4 w-0 border border-zinc-900 dark:border-white/50 rounded-full"></div>
+                                <p class="dark:text-white/70 text-zinc-900 text-sm font-medium">Time In to unlock your journal</p>
                             </div>
                         </div>
                         <button disabled class="flex items-center justify-center px-5 h-10 rounded-full bg-zinc-500/20 text-zinc-500 cursor-not-allowed opacity-50 gap-2">
@@ -280,16 +280,16 @@
                         </button>
                     </div>
                 <?php else: ?>
-                    <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-600 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 <?php echo $hasJournalToday ? 'border-green-500' : 'border-yellow-500'; ?>">
+                    <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-200 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 <?php echo $hasJournalToday ? 'border-green-500' : 'border-yellow-500'; ?>">
                         <div class="flex flex-col items-center justify-between">
                             <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                                <i class="fa-solid <?php echo $hasJournalToday ? 'fa-check text-green-500' : 'fa-file-pen text-white'; ?> text-lg"></i>
-                                <p class="text-white text-lg font-medium"><?php echo $hasJournalToday ? 'Entry Saved' : 'Pending Entry'; ?></p>
-                                <div class="h-4 w-0 border border-white/50 rounded-full"></div>
-                                <p class="text-white/70 text-sm font-medium">What did you learn today?</p>
+                                <i class="fa-solid <?php echo $hasJournalToday ? 'fa-check text-green-500' : 'fa-file-pen dark:text-white text-zinc-900'; ?> text-lg"></i>
+                                <p class="text-zinc-900 dark:text-white text-lg font-medium"><?php echo $hasJournalToday ? 'Entry Saved' : 'Pending Entry'; ?></p>
+                                <div class="h-4 w-0 border border-zinc-900 dark:border-white/50 rounded-full"></div>
+                                <p class="dark:text-white/70 text-zinc-900 text-sm font-medium">What did you learn today?</p>
                             </div>
                             <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                                <p class="text-white/70 text-sm font-medium truncate w-[400px]">
+                                <p class="dark:text-white/70 text-zinc-900 text-sm font-medium truncate w-[400px]">
                                     <?php echo $hasJournalToday ? htmlspecialchars($journalText) : 'You have not submitted a journal entry for today yet.'; ?>
                                 </p>
                             </div>
