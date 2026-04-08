@@ -157,7 +157,7 @@
                             <span class="dark:text-white/50 text-white/90">Absent/s:</span>
                             <span class="dark:text-white text-white/90"><?php echo $totalAbsents; ?></span>
                         </div>
-                    </div> 
+                    </div>
                     <div class="flex flex-row items-center justify-start gap-3 h-full w-auto">
                         <div class="flex items-center justify-center w-auto h-10 bg-zinc-800 rounded-full px-3 py-1 gap-2 shadow-md">
                             <span class="<?= $_SESSION['restriction']['role'] === 'admin' ? 'text-red-500' : ($_SESSION['restriction']['role'] == 'user' ? 'text-blue-500' : 'text-white/90') ?>"><?php echo ucfirst($_SESSION['restriction']['role']); ?></span>
