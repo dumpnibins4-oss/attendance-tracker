@@ -258,6 +258,7 @@
                 mainContent.innerHTML = html;
 
                 // Execute any <script> tags in the loaded content (innerHTML doesn't run them)
+                // Using remove + head.appendChild instead of replaceWith for reliable execution
                 mainContent.querySelectorAll('script').forEach(oldScript => {
                     const newScript = document.createElement('script');
                     if (oldScript.src) {
@@ -265,7 +266,9 @@
                     } else {
                         newScript.textContent = oldScript.textContent;
                     }
-                    oldScript.replaceWith(newScript);
+                    oldScript.remove();
+                    document.head.appendChild(newScript);
+                    document.head.removeChild(newScript); // cleanup after execution
                 });
                 setTimeout(() => {
                     if (typeof window.initTrackers === 'function') {
