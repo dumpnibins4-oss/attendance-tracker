@@ -13,7 +13,6 @@ CREATE TABLE att_track_users (
 	biometrics_id NVARCHAR(20),
     gmail NVARCHAR(255),
 	position NVARCHAR(50),
-	profile_picture_url NVARCHAR(MAX),
 	required_hours DECIMAL(5, 2),
 	accumulated_hours DECIMAL(5, 2)
 )

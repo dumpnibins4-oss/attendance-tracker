@@ -214,7 +214,7 @@
                                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
                                         <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
                                     </span>
-                                    <span class="text-accent font-mono text-xs font-bold tracker-timer" data-timestamp="<?php echo $timeIn->format('Y-m-d H:i:s') ?>">
+                                    <span class="text-accent font-mono text-xs font-bold tracker-timer" data-timestamp="<?php echo $timeIn->format('Y-m-d\TH:i:s') ?>">
                                         00:00:00
                                     </span>
                                 </div>
@@ -239,7 +239,13 @@
                             <?php if ($isOngoing): ?>
                                 <span class="text-zinc-400 italic text-xs">...</span>
                             <?php else: ?>
-                                <span class="text-white font-medium badge bg-zinc-700 px-2 py-1 rounded shadow-inner"><?php echo number_format(floatval($record['hours']), 2) ?> <span class="text-zinc-400 text-[10px] uppercase ml-0.5">hrs</span></span>
+                                <?php
+                                    $decHours = floatval($record['hours']);
+                                    $h = floor($decHours);
+                                    $m = round(($decHours - $h) * 60);
+                                    $formatted = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
+                                ?>
+                                <span class="text-white font-medium badge bg-zinc-700 px-2 py-1 rounded shadow-inner font-mono"><?php echo $formatted ?> <span class="text-zinc-400 text-[10px] uppercase ml-0.5">hrs</span></span>
                             <?php endif; ?>
                         </td>
 
@@ -282,6 +288,13 @@
 </div>
 
 <script>
+(function() {
+    // Clean up previous timer interval if re-navigating
+    if (window._attTimerInterval) {
+        clearInterval(window._attTimerInterval);
+        window._attTimerInterval = null;
+    }
+
     const API_URL = '../server/api/attendance_api.php';
     const MAX_HOURS = 8;
     const MAX_MS = MAX_HOURS * 3600000;
@@ -352,8 +365,6 @@
     }
 
     // ── Timer ──
-    let timerInterval = null;
-
     window.initTrackers = function() {
         const trackers = document.querySelectorAll('.tracker-timer');
         if (trackers.length === 0) return;
@@ -363,9 +374,9 @@
             const timeInDate = new Date(ts);
             if (isNaN(timeInDate.getTime())) return;
 
-            if (timerInterval) clearInterval(timerInterval);
+            if (window._attTimerInterval) clearInterval(window._attTimerInterval);
 
-            timerInterval = setInterval(() => {
+            window._attTimerInterval = setInterval(() => {
                 const lunch = getLunchState();
                 const now = Date.now();
 
@@ -512,7 +523,9 @@
                     confirmButtonColor: '#ef4444',
                     cancelButtonColor: '#71717a',
                     confirmButtonText: 'Yes, Time Out',
-                    cancelButtonText: 'Cancel'
+                    cancelButtonText: 'Cancel',
+                    background: document.documentElement.classList.contains('dark') ? '#27272a' : '#fff',
+                    color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
                 });
 
                 if (!result.isConfirmed) return;
@@ -534,10 +547,10 @@
 
                     if (data.success) {
                         clearLunchState();
-                        if (timerInterval) clearInterval(timerInterval);
+                        if (window._attTimerInterval) clearInterval(window._attTimerInterval);
 
                         Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true })
-                            .fire({ icon: 'success', title: `${data.message} (${data.hours} hrs logged)` })
+                            .fire({ icon: 'success', title: (() => { const h = Math.floor(data.hours); const m = Math.round((data.hours - h) * 60); return `${data.message} (${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} hrs logged)`; })() })
                             .then(() => {
                                 if (typeof navigateTo === 'function') {
                                     navigateTo('attendance');
@@ -555,9 +568,7 @@
         });
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initTrackers);
-    } else {
-        initTrackers();
-    }
+    // Run trackers immediately (document is already loaded during SPA nav)
+    initTrackers();
+})();
 </script>

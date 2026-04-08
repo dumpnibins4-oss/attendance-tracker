@@ -30,16 +30,15 @@
                     exit;
                 }
 
-                // Determine status: late if after 8:00 AM
-                $currentHour = (int) date('G'); // 0-23
-                $currentMin  = (int) date('i');
-                $status = ($currentHour > 8 || ($currentHour === 8 && $currentMin > 30)) ? 'late' : 'present';
-
+                // Determine status in SQL Server (same clock as time_in) to avoid timezone mismatch
                 $stmt = $conn->prepare("
                     INSERT INTO att_track_attendance (user_id, time_in, status)
-                    VALUES (?, GETDATE(), ?)
+                    VALUES (?, GETDATE(),
+                        CASE WHEN DATEPART(HOUR, GETDATE()) > 8
+                                  OR (DATEPART(HOUR, GETDATE()) = 8 AND DATEPART(MINUTE, GETDATE()) >= 30)
+                             THEN 'late' ELSE 'present' END)
                 ");
-                $stmt->execute([$userId, $status]);
+                $stmt->execute([$userId]);
 
                 // Return the created record
                 $stmt = $conn->prepare("
@@ -66,9 +65,9 @@
         // ──────────────────────────────────────
         case 'time_out':
             try {
-                // Get today's record
+                // Get today's record (just need id and time_out check)
                 $stmt = $conn->prepare("
-                    SELECT id, time_in, time_out
+                    SELECT id, time_out
                     FROM att_track_attendance
                     WHERE user_id = ? AND CAST(time_in AS DATE) = CAST(GETDATE() AS DATE)
                 ");
@@ -88,34 +87,25 @@
                 // Lunch minutes sent from client (total minutes spent on lunch)
                 $lunchMinutes = floatval($_POST['lunchMinutes'] ?? 0);
 
-                // Calculate hours worked
-                $timeIn = new DateTime($record['time_in']);
-                $now    = new DateTime();
-                $diffSeconds = $now->getTimestamp() - $timeIn->getTimestamp();
-                $diffHours   = $diffSeconds / 3600.0;
-
-                // Subtract lunch break
-                $diffHours -= ($lunchMinutes / 60.0);
-
-                // Cap at 8 hours
-                if ($diffHours > 8.00) {
-                    $diffHours = 8.00;
-                }
-
-                // Floor to 0 if negative
-                if ($diffHours < 0) {
-                    $diffHours = 0;
-                }
-
-                $hours = round($diffHours, 2);
-
-                // Update attendance record
+                // Calculate hours entirely in SQL Server to avoid timezone mismatches
+                // Since time_in was set with GETDATE(), we compute diff on the same server clock
                 $stmt = $conn->prepare("
                     UPDATE att_track_attendance
-                    SET time_out = GETDATE(), hours = ?
+                    SET time_out = GETDATE(),
+                        hours = ROUND(
+                            CASE
+                                WHEN (DATEDIFF(SECOND, time_in, GETDATE()) / 3600.0 - ? / 60.0) > 8.0 THEN 8.0
+                                WHEN (DATEDIFF(SECOND, time_in, GETDATE()) / 3600.0 - ? / 60.0) < 0   THEN 0
+                                ELSE (DATEDIFF(SECOND, time_in, GETDATE()) / 3600.0 - ? / 60.0)
+                            END, 2)
                     WHERE id = ?
                 ");
-                $stmt->execute([$hours, $record['id']]);
+                $stmt->execute([$lunchMinutes, $lunchMinutes, $lunchMinutes, $record['id']]);
+
+                // Fetch the computed hours back
+                $stmt = $conn->prepare("SELECT hours FROM att_track_attendance WHERE id = ?");
+                $stmt->execute([$record['id']]);
+                $hours = floatval($stmt->fetchColumn());
 
                 // Add to user's accumulated_hours
                 $stmt = $conn->prepare("
