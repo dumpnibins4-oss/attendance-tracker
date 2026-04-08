@@ -12,6 +12,19 @@
     $percent = $hoursRequired > 0 ? min(100, round(($hoursRendered / $hoursRequired) * 100)) : 0;
     $remaining = max(0, $hoursRequired - $hoursRendered);
 
+    // Format hours as HH:MM for display
+    $renderedH = floor($hoursRendered);
+    $renderedM = round(($hoursRendered - $renderedH) * 60);
+    $renderedFmt = str_pad($renderedH, 2, '0', STR_PAD_LEFT) . ':' . str_pad($renderedM, 2, '0', STR_PAD_LEFT);
+
+    $remainH = floor($remaining);
+    $remainM = round(($remaining - $remainH) * 60);
+    $remainFmt = str_pad($remainH, 2, '0', STR_PAD_LEFT) . ':' . str_pad($remainM, 2, '0', STR_PAD_LEFT);
+
+    $requiredH = floor($hoursRequired);
+    $requiredM = round(($hoursRequired - $requiredH) * 60);
+    $requiredFmt = str_pad($requiredH, 2, '0', STR_PAD_LEFT) . ':' . str_pad($requiredM, 2, '0', STR_PAD_LEFT);
+
     // Fetch today's record
     $stmtToday = $conn->prepare("
         SELECT id, time_in, time_out, journal 
@@ -117,14 +130,14 @@
             <div class="flex flex-row items-center justify-between w-full flex-1 gap-6">
                 <!-- Hours + progress bar -->
                 <div class="flex flex-col justify-center gap-1.5">
-                    <p class="text-3xl font-bold text-zinc-900 dark:text-white leading-none">
-                        <?php echo $hoursRendered ?>
-                        <span class="text-sm font-normal dark:text-zinc-300 text-zinc-900">/ <?php echo $hoursRequired ?> hrs</span>
+                    <p class="text-3xl font-bold text-zinc-900 dark:text-white leading-none font-mono">
+                        <?php echo $renderedFmt ?>
+                        <span class="text-sm font-normal dark:text-zinc-300 text-zinc-900 font-sans">/ <?php echo $requiredFmt ?> hrs</span>
                     </p>
                     <div class="w-44 h-2 bg-zinc-600 dark:bg-zinc-700 rounded-full overflow-hidden">
                         <div class="h-full bg-accent rounded-full" style="width: <?php echo $percent ?>%"></div>
                     </div>
-                    <p class="text-xs dark:text-zinc-300 text-zinc-900"><?php echo $remaining ?> hrs remaining &mdash; <?php echo $percent ?>% done</p>
+                    <p class="text-xs dark:text-zinc-300 text-zinc-900"><?php echo $remainFmt ?> hrs remaining &mdash; <?php echo $percent ?>% done</p>
                 </div>
 
                 <!-- Divider -->
