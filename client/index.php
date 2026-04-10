@@ -130,9 +130,32 @@
                             <span class="text-white/50">Role:</span>
                             <span class="<?= $_SESSION['restriction']['role'] === 'admin' ? 'text-red-500' : ($_SESSION['restriction']['role'] == 'user' ? 'text-blue-500' : 'text-white/90') ?>"><?php echo ucfirst($_SESSION['restriction']['role']); ?></span>
                         </div>
-                        <button class="flex items-center justify-center h-10 w-12 rounded-full bg-zinc-500 dark:bg-zinc-800 hover:bg-zinc-700 transition-all duration-300 cursor-pointer">
-                            <i class="fa-regular fa-bell text-white"></i>
-                        </button>
+                        <!-- Bell / Notifications Button -->
+                        <div class="relative" id="notif-bell-wrap">
+                            <button id="notif-bell-btn"
+                                class="flex items-center justify-center h-10 w-12 rounded-full bg-zinc-500 dark:bg-zinc-800 hover:bg-zinc-700 transition-all duration-300 cursor-pointer"
+                                title="Notifications">
+                                <i class="fa-regular fa-bell text-white"></i>
+                            </button>
+                            <!-- Unread badge -->
+                            <span id="notif-badge"
+                                class="hidden absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none shadow-sm">
+                            </span>
+                            <!-- Notification Dropdown -->
+                            <div id="notif-dropdown"
+                                class="hidden absolute right-0 top-12 w-80 bg-zinc-800 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
+                                <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                                    <p class="text-white font-semibold text-sm">Notifications</p>
+                                    <span id="notif-count-label" class="text-zinc-400 text-xs"></span>
+                                </div>
+                                <div id="notif-list" class="flex flex-col max-h-72 overflow-y-auto divide-y divide-white/5">
+                                    <!-- injected by JS -->
+                                </div>
+                                <div class="px-4 py-2 border-t border-white/10 text-center">
+                                    <p id="notif-empty" class="hidden text-zinc-500 text-xs py-4">You have no notifications.</p>
+                                </div>
+                            </div>
+                        </div>
                         <div class="h-10 w-0 border border-zinc-300 dark:border-zinc-600 rounded-full"></div>
                         <div class="flex flex-row items-center justify-start gap-2 h-10 w-auto py-1">
                             <?php
@@ -145,7 +168,7 @@
                                  class="h-10 w-10 rounded-full overflow-hidden flex items-center justify-center text-white text-sm font-bold flex-shrink-0"
                                  style="background: linear-gradient(135deg, #f97316, #ea580c);">
                                 <?php if ($topBarPhoto): ?>
-                                    <img src="<?php echo htmlspecialchars($topBarPhoto); ?>" alt="Avatar" class="w-full h-full object-cover" />
+                                    <img src="<?php echo htmlspecialchars($topBarPhoto); ?>" alt="Avatar" class="user-avatar-img w-full h-full object-cover" />
                                 <?php else: ?>
                                     <?php echo $topBarInitials; ?>
                                 <?php endif; ?>
@@ -303,5 +326,85 @@
                 }
             });
         });
+
+        // --- Notifications Bell ---
+        const bellBtn      = document.getElementById('notif-bell-btn');
+        const bellDropdown = document.getElementById('notif-dropdown');
+        const bellBadge    = document.getElementById('notif-badge');
+        const notifList    = document.getElementById('notif-list');
+        const notifEmpty   = document.getElementById('notif-empty');
+        const notifCountLbl= document.getElementById('notif-count-label');
+
+        async function loadNotifications() {
+            try {
+                const res  = await fetch('./server/api/get_notifications.php');
+                const data = await res.json();
+                if (!data.success) return;
+
+                const notifs = data.notifs || [];
+                const count  = notifs.length;
+
+                // Badge
+                if (count > 0) {
+                    bellBadge.textContent = count > 9 ? '9+' : count;
+                    bellBadge.classList.remove('hidden');
+                } else {
+                    bellBadge.classList.add('hidden');
+                }
+
+                notifCountLbl.textContent = count > 0 ? `${count} notification${count !== 1 ? 's' : ''}` : '';
+
+                // List
+                notifList.innerHTML = '';
+                if (count === 0) {
+                    notifEmpty.classList.remove('hidden');
+                } else {
+                    notifEmpty.classList.add('hidden');
+                    notifs.forEach(n => {
+                        const item = document.createElement('div');
+                        item.className = 'flex flex-col gap-0.5 px-4 py-3 hover:bg-white/5 transition-colors cursor-default';
+                        item.innerHTML = `
+                            <div class="flex items-center justify-between gap-2">
+                                <p class="text-white text-sm font-medium leading-snug flex-1">${escHtml(n.title)}</p>
+                                <span class="text-zinc-500 text-[10px] flex-shrink-0">${escHtml(n.time_ago)}</span>
+                            </div>
+                            <p class="text-zinc-400 text-xs leading-snug">${escHtml(n.content)}</p>
+                        `;
+                        notifList.appendChild(item);
+                    });
+                }
+            } catch (e) {
+                console.warn('Could not load notifications', e);
+            }
+        }
+
+        function escHtml(str) {
+            const d = document.createElement('div');
+            d.textContent = str || '';
+            return d.innerHTML;
+        }
+
+        // Toggle dropdown
+        bellBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = !bellDropdown.classList.contains('hidden');
+            if (isOpen) {
+                bellDropdown.classList.add('hidden');
+            } else {
+                bellDropdown.classList.remove('hidden');
+                loadNotifications();
+            }
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!document.getElementById('notif-bell-wrap').contains(e.target)) {
+                bellDropdown.classList.add('hidden');
+            }
+        });
+
+        // Initial load + auto-refresh every 60s
+        loadNotifications();
+        setInterval(loadNotifications, 60000);
     </script>
 </html>
