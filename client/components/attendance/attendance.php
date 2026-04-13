@@ -3,572 +3,469 @@
     include_once(__DIR__ . '/../../../server/db/conn.php');
 
     $userId = $_SESSION['current_user']['id'] ?? 0;
+    $biometricsId = $_SESSION['current_user']['biometrics_id'] ?? '';
 
-    // Get today's record
-    $stmtToday = $conn->prepare("
-        SELECT id, time_in, time_out, status, hours
-        FROM att_track_attendance
-        WHERE user_id = ? AND CAST(time_in AS DATE) = CAST(GETDATE() AS DATE)
-    ");
-    $stmtToday->execute([$userId]);
-    $todayRecord = $stmtToday->fetch(PDO::FETCH_ASSOC);
+    if ($biometricsId) {
+        try {
+            $conn->exec("ALTER TABLE att_track_attendance ADD in_location NVARCHAR(255), out_location NVARCHAR(255)");
+        } catch (Exception $e) { /* Already exists */ }
 
-    // Determine button state
-    $hasTimedIn  = $todayRecord !== false;
-    $hasTimedOut = $hasTimedIn && $todayRecord['time_out'] !== null;
-    $timeInISO   = $hasTimedIn ? $todayRecord['time_in'] : null;
+        try {
+            // Sync logs from biometrics staging table to attendance table
+            $syncStmt = $conn->prepare("
+                WITH DailyBounds AS (
+                    SELECT 
+                        CAST(log_datetime AS DATE) as log_date,
+                        MIN(CASE WHEN device_name = 'GO Entrance Door Access' THEN log_datetime ELSE NULL END) as time_in,
+                        MAX(log_datetime) as time_out
+                    FROM [LRNPH_HIK_BIO].[dbo].hik_logs_staging
+                    WHERE emp_id = ?
+                    GROUP BY CAST(log_datetime AS DATE)
+                )
+                SELECT 
+                    db.log_date,
+                    db.time_in,
+                    db.time_out,
+                    l_in.device_name as in_location,
+                    l_out.device_name as out_location
+                FROM DailyBounds db
+                LEFT JOIN [LRNPH_HIK_BIO].[dbo].hik_logs_staging l_in
+                    ON l_in.emp_id = ? AND l_in.log_datetime = db.time_in AND l_in.device_name = 'GO Entrance Door Access'
+                LEFT JOIN (
+                    SELECT emp_id, log_datetime, MAX(device_name) as device_name
+                    FROM [LRNPH_HIK_BIO].[dbo].hik_logs_staging
+                    GROUP BY emp_id, log_datetime
+                ) l_out ON l_out.emp_id = ? AND l_out.log_datetime = db.time_out
+            ");
+            $syncStmt->execute([$biometricsId, $biometricsId, $biometricsId]);
+            $logs = $syncStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get all attendance records for the table
-    $stmtAll = $conn->prepare("
-        SELECT id, time_in, time_out, status, hours, journal
-        FROM att_track_attendance
-        WHERE user_id = ?
-        ORDER BY time_in DESC
-    ");
-    $stmtAll->execute([$userId]);
-    $attendanceRecords = $stmtAll->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($logs as $log) {
+                $timeIn = $log['time_in'];
+                $timeOut = $log['time_out'];
+                if ($timeIn === $timeOut || !$timeIn) {
+                    $timeOut = $timeOut ?: null; // Keep whatever logic makes sense, but ensure if they match, we clear one of them?
+                    // Actually, if they only punch out, timeIn is null, timeOut is valid.
+                    // If they only punch in, timeIn is valid, timeOut is same as timeIn.
+                    if ($timeIn && $timeIn === $timeOut) {
+                        $timeOut = null;
+                    }
+                }
+                $dateOnly = $log['log_date'];
 
-    $statusBadge = [
-        'present' => 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-        'late'    => 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-        'absent'  => 'bg-red-500/10 text-red-500 border-red-500/20',
-    ];
+                $hours = 0;
+                if ($timeIn && $timeOut) {
+                    $diff = strtotime($timeOut) - strtotime($timeIn);
+                    $hours = round($diff / 3600, 2);
+                    if ($hours > 8) {
+                        $hours = 8;
+                    }
+                }
 
-    $statusIcon = [
-        'present' => 'fa-check',
-        'late'    => 'fa-clock',
-        'absent'  => 'fa-xmark',
-    ];
+                $status = 'present';
+                if ($hours < 8) {
+                    $status = 'incomplete';
+                }
+                if (!$timeIn && !$timeOut) {
+                    $status = 'absent';
+                }
+
+                $inLoc = $log['in_location'] ?: '--';
+                $outLoc = $log['out_location'] ?: '--';
+                if (!$timeOut) {
+                    $outLoc = '--'; // Only 1 log for the whole day, so exit point should equal '--' (null mapping)
+                }
+
+                $checkStmt = $conn->prepare("SELECT id FROM att_track_attendance WHERE user_id = ? AND CAST(time_in AS DATE) = ?");
+                $checkStmt->execute([$userId, $dateOnly]);
+                $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($existing) {
+                    $updateStmt = $conn->prepare("UPDATE att_track_attendance SET time_out = ?, hours = ?, status = ?, in_location = ?, out_location = ? WHERE id = ?");
+                    $updateStmt->execute([$timeOut, $hours, $status, $inLoc, $outLoc, $existing['id']]);
+                } else {
+                    $insertStmt = $conn->prepare("INSERT INTO att_track_attendance (user_id, time_in, time_out, status, hours, journal, in_location, out_location) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                    $insertStmt->execute([$userId, $timeIn, $timeOut, $status, $hours, '', $inLoc, $outLoc]);
+                }
+
+                // Push locations to att_track_users as user requested
+                $updateUser = $conn->prepare("UPDATE att_track_users SET in_location = ?, out_location = ? WHERE id = ?");
+                $updateUser->execute([$inLoc, $outLoc, $userId]);
+            }
+        } catch (Exception $e) {
+            // Silently handle error so UI doesn't break
+        }
+    }
+
+    // Fetch synced attendance records
+    $attStmt = $conn->prepare("SELECT * FROM att_track_attendance WHERE user_id = ? ORDER BY time_in DESC");
+    $attStmt->execute([$userId]);
+    $attendances = $attStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fetch total accumulated and required hours
+    $sumStmt = $conn->prepare("SELECT SUM(hours) as sum_hours FROM att_track_attendance WHERE user_id = ?");
+    $sumStmt->execute([$userId]);
+    $totalHoursAcc = floatval($sumStmt->fetchColumn() ?: 0);
+
+    // Update the local users table with accurate dynamic accumulation
+    $updateAcc = $conn->prepare("UPDATE att_track_users SET accumulated_hours = ? WHERE id = ?");
+    $updateAcc->execute([$totalHoursAcc, $userId]);
+
+    $reqStmt = $conn->prepare("SELECT required_hours FROM att_track_users WHERE id = ?");
+    $reqStmt->execute([$userId]);
+    $requiredHours = floatval($reqStmt->fetchColumn() ?: 400);
+
+    $overallProgress = 0;
+    if ($requiredHours > 0) {
+        $overallProgress = min(100, round(($totalHoursAcc / $requiredHours) * 100));
+    }
+
+    $todayStmt = $conn->prepare("SELECT TOP 1 time_in, time_out, hours FROM att_track_attendance WHERE user_id = ? AND CAST(time_in AS DATE) = CAST(GETDATE() AS DATE) ORDER BY time_in DESC");
+    $todayStmt->execute([$userId]);
+    $todayRecord = $todayStmt->fetch(PDO::FETCH_ASSOC);
+    $todayTimeIn = $todayRecord['time_in'] ?? null;
+    $todayTimeOut = $todayRecord['time_out'] ?? null;
+    $todayHours = $todayRecord ? floatval($todayRecord['hours']) : 0;
+
+    $accHrs = floor($totalHoursAcc);
+    $accMins = round(($totalHoursAcc - $accHrs) * 60);
+    if ($accMins >= 60) { $accHrs++; $accMins = 0; }
+    $totalHoursAccStr = sprintf("%02d:%02d", $accHrs, $accMins);
+
+    $reqHrs = floor($requiredHours);
+    $reqMins = round(($requiredHours - $reqHrs) * 60);
+    if ($reqMins >= 60) { $reqHrs++; $reqMins = 0; }
+    $requiredHoursStr = sprintf("%02d:%02d", $reqHrs, $reqMins);
 ?>
 
-<div class="flex flex-col items-center justify-start w-full h-full gap-6 page-content">
-    <!-- Page Header -->
-    <div class="flex flex-col items-start justify-start w-full h-auto">
-        <div class="flex flex-row items-center justify-between w-full h-auto">
-            <h1 class="text-3xl font-bold text-accent">Attendance</h1>
-            <div class="flex flex-row items-center gap-3">
-                <button class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-accent hover:bg-accent-hover text-white text-sm font-medium transition-all hover:scale-105 cursor-pointer shadow-lg shadow-accent/20 border border-white/10">
-                    <i class="fa-solid fa-cloud-arrow-down"></i>
-                    Export CSV
-                </button>
+    <div class="flex flex-col items-center justify-start w-full h-full gap-5">
+        <div class="flex flex-col items-start justify-start w-full h-auto">
+            <div class="flex flex-row items-center justify-start w-full h-auto">
+                <h1 class="text-3xl font-bold text-accent">Attendance</h1>
+            </div>
+            <div class="flex flex-row items-center justify-start w-full h-auto gap-2">
+                <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                    <?php echo date('l, F j, Y') ?>
+                </p>
+                <div class="border border-zinc-500 dark:border-zinc-400 rounded-full h-1 w-1"></div>
+                <p class="text-sm text-zinc-500 dark:text-zinc-400">
+                    Track your attendance
+                </p>
             </div>
         </div>
-        <div class="flex flex-row items-center justify-start w-full h-auto gap-2 mt-1">
-            <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                <?php echo date('l, F j, Y') ?>
-            </p>
-            <div class="border border-zinc-500 dark:border-zinc-400 rounded-full h-1 w-1"></div>
-            <p class="text-sm text-zinc-500 dark:text-zinc-400">
-                Attendance & Shift Records
-            </p>
-        </div>
-    </div>
 
-    <!-- Attendance Table Card -->
-    <div class="flex flex-col w-full h-auto bg-zinc-500 dark:bg-zinc-800/80 rounded-4xl p-6 gap-6 shadow-xl border border-white/5 backdrop-blur-sm">
-        <div class="flex flex-row items-center justify-between w-full">
-            <div class="flex flex-row items-center gap-3">
-                <div class="h-10 w-10 bg-accent/20 text-accent rounded-full flex items-center justify-center">
-                    <i class="fa-solid fa-list-check text-lg"></i>
+        <!-- Attendance Table -->
+        <div class="grid grid-cols-3 w-full flex-1 min-h-0 gap-5">
+            <div class="col-span-2 flex flex-col items-center justify-start w-full h-full gap-5 bg-white dark:bg-zinc-800 rounded-4xl overflow-hidden">
+                <div class="flex flex-row items-center justify-start w-full h-auto gap-2 pt-6 px-6">
+                    <i class="fa-regular fa-calendar text-xl dark:text-white text-zinc-900"></i>
+                    <p class="text-xl font-medium dark:text-white text-zinc-900">Attendance History</p>
                 </div>
-                <p class="text-white text-xl font-semibold">Attendance Log</p>
-            </div>
-            <!-- Filter Controls & Action Buttons -->
-            <div class="flex flex-row items-center gap-3">
-                <div class="flex items-center gap-2 bg-zinc-600 dark:bg-zinc-700/50 rounded-full px-4 py-2 border border-white/5 focus-within:ring-2 focus-within:ring-accent transition-all duration-300 shadow-inner">
-                    <i class="fa-solid fa-search text-zinc-400 text-sm"></i>
-                    <input type="text" placeholder="Search record..." class="bg-transparent text-white text-sm outline-none placeholder-zinc-400/80 w-40" />
-                </div>
-                <div class="relative flex items-center group">
-                    <select class="appearance-none bg-zinc-600 dark:bg-zinc-800 text-white text-sm font-medium rounded-full pl-5 pr-11 py-2.5 border border-white/10 shadow-[0_2px_10px_rgba(0,0,0,0.2)] focus:ring-2 focus:ring-accent focus:border-accent outline-none hover:border-accent/60 hover:shadow-accent/10 hover:bg-zinc-500 cursor-pointer transition-all duration-300">
-                        <option class="bg-zinc-700 text-white font-medium" value="week">This Week</option>
-                        <option class="bg-zinc-700 text-white font-medium" value="month">This Month</option>
-                        <option class="bg-zinc-700 text-white font-medium" value="all">All Time</option>
-                    </select>
-                    <div class="absolute right-3 pointer-events-none w-6 h-6 flex items-center justify-center rounded-full bg-white/5 group-hover:bg-accent/20 transition-colors duration-300">
-                        <i class="fa-solid fa-chevron-down text-zinc-400 group-hover:text-accent transition-colors duration-300 text-[10px]"></i>
+                <div class="grid grid-cols-2 w-full h-16 px-6">
+                    <div class="flex flex-col items-center justify-start">
+                        <div class="flex flex-row items-center justify-start w-full h-auto gap-2">
+                            <i class="fa-regular fa-clock text-md dark:text-white text-zinc-900"></i>
+                            <p class="text-md font-medium dark:text-white text-zinc-900">Today's Timer</p>
+                        </div>
+                        <div class="flex flex-row items-end justify-start w-full flex-1 gap-2">
+                            <p id="live-timer" class="text-4xl font-medium text-green-500 font-mono tracking-wider">00:00:00</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-center justify-between">
+                        <div class="flex flex-row items-center justify-between w-full h-auto gap-2">
+                            <div class="flex flex-row items-center gap-2">
+                                <i class="fa-solid fa-arrow-trend-up text-md dark:text-white text-zinc-900"></i>
+                                <p class="text-md font-medium dark:text-white text-zinc-900">Progress</p>
+                            </div>
+                            <span class="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                                <?= $totalHoursAccStr ?> / <?= $requiredHoursStr ?> Hrs (<?= $overallProgress ?>%)
+                            </span>
+                        </div>
+                        <div class="flex flex-row items-end justify-start w-full h-8 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden relative mt-1 shadow-inner">
+                            <div class="absolute top-0 bottom-0 left-0 bg-accent transition-all duration-1000" style="width: <?= $overallProgress ?>%"></div>
+                        </div>
                     </div>
                 </div>
+                <div class="flex flex-col items-center justify-start w-full h-13 bg-zinc-200 dark:bg-zinc-700 rounded-t-xl shrink-0"></div>
+                <div class="relative w-full flex-1 min-h-0">
+                    <div class="absolute inset-0 p-5 overflow-y-auto thin-scrollbar shadow-[inset_0_20px_15px_-15px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_20px_15px_-15px_rgba(0,0,0,0.4)]">
+                        <div class="grid grid-cols-4 content-start gap-3 w-full">
+                            <?php if (count($attendances) > 0): ?>
+                                <?php foreach ($attendances as $att): ?>
+                                    <?php 
+                                        $dateObj = new DateTime($att['time_in'] ?? $att['time_out'] ?? 'now');
+                                        $dateStr = $dateObj->format('m-d-Y');
+                                        
+                                        $timeInStr = $att['time_in'] ? (new DateTime($att['time_in']))->format('h:i A') : '--:--';
+                                        $timeOutStr = $att['time_out'] ? (new DateTime($att['time_out']))->format('h:i A') : '--:--';
+                                        
+                                        $statusClass = 'bg-accent/20 text-accent';
+                                        $iconClass = 'fa-solid fa-check text-accent';
+                                        $statusText = 'Complete';
+                                        $cardClass = 'bg-accent/20 border-solid border-accent shadow-accent/20';
 
-                <!-- Lunch Break Button -->
-                <?php if ($hasTimedIn && !$hasTimedOut): ?>
-                <button id="btn-lunch"
-                    class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium transition-all hover:scale-105 cursor-pointer shadow-lg shadow-yellow-500/20 border border-white/10">
-                    <i class="fa-solid fa-utensils"></i>
-                    <span>Start Lunch</span>
-                </button>
-                <?php else: ?>
-                <button disabled
-                    class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-600/50 text-zinc-400 text-sm font-medium border border-white/5 cursor-not-allowed opacity-50">
-                    <i class="fa-solid fa-utensils"></i>
-                    <span>Start Lunch</span>
-                </button>
-                <?php endif; ?>
-
-                <!-- Time In / Time Out Button -->
-                <?php if (!$hasTimedIn): ?>
-                    <!-- TIME IN -->
-                    <button id="btn-time-action"
-                        class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-green-500 hover:bg-green-600 text-white text-sm font-medium transition-all hover:scale-105 cursor-pointer shadow-lg shadow-green-500/20 border border-white/10"
-                        data-action="time_in">
-                        <i class="fa-regular fa-clock"></i>
-                        Time In
-                    </button>
-                <?php elseif (!$hasTimedOut): ?>
-                    <!-- TIME OUT -->
-                    <button id="btn-time-action"
-                        class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-all hover:scale-105 cursor-pointer shadow-lg shadow-red-500/20 border border-white/10"
-                        data-action="time_out">
-                        <i class="fa-solid fa-right-from-bracket"></i>
-                        Time Out
-                    </button>
-                <?php else: ?>
-                    <!-- COMPLETED -->
-                    <button disabled
-                        class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-zinc-600 text-zinc-400 text-sm font-medium border border-white/5 cursor-not-allowed opacity-60">
-                        <i class="fa-solid fa-check"></i>
-                        Completed
-                    </button>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- Table -->
-        <div class="w-full rounded-3xl border border-white/5 shadow-inner bg-zinc-600 dark:bg-zinc-900/40">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="bg-zinc-500 dark:bg-zinc-800/80 border-b border-white/10 uppercase tracking-wider text-[10px] font-bold text-zinc-300">
-                        <th class="text-left px-6 py-4">Date</th>
-                        <th class="text-left px-6 py-4">Day</th>
-                        <th class="text-left px-6 py-4">Time In</th>
-                        <th class="text-left px-6 py-4">Time Out</th>
-                        <th class="text-left px-6 py-4 w-32">Tracker</th>
-                        <th class="text-left px-6 py-4">Status</th>
-                        <th class="text-center px-6 py-4">Hours</th>
-                        <th class="text-center px-6 py-4">Journal</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-white/5">
-                    <?php if (empty($attendanceRecords)): ?>
-                    <tr>
-                        <td colspan="8" class="px-6 py-12 text-center text-zinc-400">
-                            <div class="flex flex-col items-center gap-2">
-                                <i class="fa-solid fa-inbox text-3xl opacity-40"></i>
-                                <p>No attendance records yet. Click <b>Time In</b> to start!</p>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endif; ?>
-
-                    <?php foreach ($attendanceRecords as $index => $record):
-                        $timeIn  = $record['time_in'] ? new DateTime($record['time_in']) : null;
-                        $timeOut = $record['time_out'] ? new DateTime($record['time_out']) : null;
-                        $isToday = $timeIn && $timeIn->format('Y-m-d') === date('Y-m-d');
-                        $isOngoing = $timeIn && !$timeOut && $isToday;
-                        $status = $record['status'] ?? 'absent';
-                        $badge = $statusBadge[$status] ?? $statusBadge['absent'];
-                        $icon  = $statusIcon[$status] ?? $statusIcon['absent'];
-                    ?>
-                    <tr class="hover:bg-zinc-500/20 dark:hover:bg-zinc-700/20 transition-all duration-200 group">
-                        
-                        <!-- Date -->
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-white font-medium group-hover:text-accent transition-colors duration-200">
-                                <?php echo $timeIn ? $timeIn->format('M j, Y') : '—' ?>
-                            </span>
-                        </td>
-                        
-                        <!-- Day -->
-                        <td class="px-6 py-4 whitespace-nowrap text-zinc-300 font-medium">
-                            <?php echo $timeIn ? $timeIn->format('l') : '—' ?>
-                        </td>
-
-                        <!-- Time In -->
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <?php if ($timeIn): ?>
-                                <span class="bg-white/5 text-zinc-200 px-3 py-1 rounded-md border border-white/10 font-mono text-xs shadow-inner">
-                                    <?php echo $timeIn->format('h:i A') ?>
-                                </span>
+                                        if ($att['status'] === 'incomplete' || (!$att['time_out'])) {
+                                            $statusClass = 'bg-yellow-500/20 text-yellow-500';
+                                            $iconClass = 'fa-solid fa-triangle-exclamation text-yellow-500';
+                                            $statusText = 'Incomplete';
+                                            $cardClass = 'bg-zinc-200 dark:bg-zinc-700 border-dashed border-zinc-400 dark:border-zinc-500';
+                                        } elseif ($att['status'] === 'absent') {
+                                            $statusClass = 'bg-red-500/20 text-red-500';
+                                            $iconClass = 'fa-solid fa-xmark text-red-500';
+                                            $statusText = 'Absent';
+                                            $cardClass = 'bg-zinc-200 dark:bg-zinc-700 border-dashed border-zinc-400 dark:border-zinc-500';
+                                        }
+                                        
+                                        $bgClass = explode(' ', $statusClass)[0];
+                                        $txtClass = explode(' ', $statusClass)[1];
+                                    ?>
+                                    <!-- Attendance Card -->
+                                    <button class="att-card flex flex-col items-start justify-between w-full h-40 rounded-md border-2 p-5 shadow-md shadow-black/20 cursor-pointer hover:scale-105 transition-all duration-300 hover:shadow-black/40 <?= $cardClass ?>"
+                                        data-id="<?= $att['id'] ?>"
+                                        data-date="<?= $dateObj->format('l') ?>"
+                                        data-date-full="<?= $dateStr ?>"
+                                        data-times="<?= $timeInStr . ' - ' . $timeOutStr ?>"
+                                        data-status-text="<?= $statusText ?>"
+                                        data-status-bg="<?= $bgClass ?>"
+                                        data-status-txt="<?= $txtClass ?>"
+                                        data-hours="<?= $att['hours'] ?? 0 ?>"
+                                        data-in-location="<?= htmlspecialchars($att['in_location'] ?: '--') ?>"
+                                        data-out-location="<?= htmlspecialchars($att['out_location'] ?: '--') ?>"
+                                        data-journal="<?= htmlspecialchars($att['journal'] ?: 'No journal entry available for this log.') ?>">
+                                        
+                                        <div class="flex flex-col w-full items-start">
+                                            <h2 class="text-xl font-medium dark:text-white text-zinc-900"><?= $dateStr ?></h2>
+                                            <p class="text-sm font-medium dark:text-white/60 text-zinc-900"><?= $timeInStr ?> - <?= $timeOutStr ?></p>
+                                        </div>
+                                        <div class="flex flex-row items-center justify-start w-full h-auto gap-2">
+                                            <div class="flex items-center justify-center px-2 py-1 rounded-full <?= $bgClass ?>">
+                                                <i class="<?= $iconClass ?> text-xl"></i>
+                                            </div>
+                                            <div class="flex items-center justify-center px-2 py-1 rounded-full <?= $bgClass ?>">
+                                                <p class="text-sm font-medium <?= $txtClass ?>"><?= $statusText ?></p>
+                                            </div>
+                                        </div>
+                                    </button>
+                                <?php endforeach; ?>
                             <?php else: ?>
-                                <span class="text-zinc-500">—</span>
+                                <p class="text-zinc-500 dark:text-zinc-400 col-span-4 text-center mt-5">No attendance records found.</p>
                             <?php endif; ?>
-                        </td>
-
-                        <!-- Time Out -->
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <?php if ($timeOut): ?>
-                                <span class="bg-white/5 text-zinc-200 px-3 py-1 rounded-md border border-white/10 font-mono text-xs shadow-inner">
-                                    <?php echo $timeOut->format('h:i A') ?>
-                                </span>
-                            <?php else: ?>
-                                <span class="text-zinc-500">—</span>
-                            <?php endif; ?>
-                        </td>
-
-                        <!-- Real-time Tracker -->
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <?php if ($isOngoing): ?>
-                                <!-- Active Tracker -->
-                                <div class="flex flex-row items-center gap-2">
-                                    <span class="flex h-2.5 w-2.5 relative">
-                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                                        <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
-                                    </span>
-                                    <span class="text-accent font-mono text-xs font-bold tracker-timer" data-timestamp="<?php echo $timeIn->format('Y-m-d\TH:i:s') ?>">
-                                        00:00:00
-                                    </span>
-                                </div>
-                            <?php elseif ($timeIn && $timeOut): ?>
-                                <!-- Completed -->
-                                <span class="text-zinc-400 font-mono text-xs"><i class="fa-solid fa-stop text-[10px] mr-1 opacity-50"></i> Done</span>
-                            <?php else: ?>
-                                <span class="text-zinc-500">—</span>
-                            <?php endif; ?>
-                        </td>
-
-                        <!-- Status -->
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold border <?php echo $badge ?>">
-                                <i class="fa-solid <?php echo $icon ?> text-[10px]"></i>
-                                <?php echo strtoupper($status) ?>
-                            </span>
-                        </td>
-
-                        <!-- Hours -->
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <?php if ($isOngoing): ?>
-                                <span class="text-zinc-400 italic text-xs">...</span>
-                            <?php else: ?>
-                                <?php
-                                    $decHours = floatval($record['hours']);
-                                    $h = floor($decHours);
-                                    $m = round(($decHours - $h) * 60);
-                                    $formatted = str_pad($h, 2, '0', STR_PAD_LEFT) . ':' . str_pad($m, 2, '0', STR_PAD_LEFT);
-                                ?>
-                                <span class="text-white font-medium badge bg-zinc-700 px-2 py-1 rounded shadow-inner font-mono"><?php echo $formatted ?> <span class="text-zinc-400 text-[10px] uppercase ml-0.5">hrs</span></span>
-                            <?php endif; ?>
-                        </td>
-
-                        <!-- Journal -->
-                        <td class="px-6 py-4 whitespace-nowrap text-center">
-                            <?php if ($status === 'absent'): ?>
-                                <button disabled class="h-8 w-8 rounded-full bg-zinc-500/20 text-zinc-500 border border-white/5 cursor-not-allowed opacity-50">
-                                    <i class="fa-solid fa-ban text-[12px]"></i>
-                                </button>
-                            <?php else: ?>
-                                <button onclick='openJournalModal(<?php echo $record['id']; ?>, <?php echo htmlspecialchars(json_encode($record['journal'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>)' class="h-8 w-8 rounded-full bg-accent/10 hover:bg-accent text-accent hover:text-white border border-accent/20 transition-all duration-300 hover:shadow-lg hover:shadow-accent/30 cursor-pointer group-hover:-translate-y-0.5">
-                                    <i class="fa-solid <?php echo empty(trim((string)$record['journal'])) ? 'fa-pen-nib' : 'fa-check'; ?> text-[12px]"></i>
-                                </button>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-            
-            <!-- Pagination -->
-            <?php if (count($attendanceRecords) > 0): ?>
-            <div class="flex flex-row items-center justify-between w-full px-6 py-4 bg-zinc-600/50 dark:bg-zinc-900/50 border-t border-white/5">
-                <p class="text-xs text-zinc-400">Showing <span class="text-white font-medium">1</span> to <span class="text-white font-medium"><?php echo min(count($attendanceRecords), 10) ?></span> of <span class="text-white font-medium"><?php echo count($attendanceRecords) ?></span> entries</p>
-                <div class="flex items-center gap-1.5">
-                    <button class="flex items-center justify-center h-8 w-8 rounded-full bg-white/5 text-zinc-400 hover:text-white hover:bg-accent/80 transition-all border border-white/10 cursor-not-allowed opacity-50" disabled>
-                        <i class="fa-solid fa-chevron-left text-xs pr-0.5"></i>
-                    </button>
-                    <button class="flex items-center justify-center h-8 w-8 rounded-full bg-accent text-white shadow-lg shadow-accent/20 border border-accent/50 font-medium text-xs transition-all cursor-pointer hover:scale-105 active:scale-95">
-                        1
-                    </button>
-                    <button class="flex items-center justify-center h-8 w-8 rounded-full bg-white/5 text-zinc-400 hover:text-white hover:bg-accent hover:shadow-lg hover:shadow-accent/20 transition-all border border-white/10 cursor-pointer hover:scale-105 active:scale-95">
-                        <i class="fa-solid fa-chevron-right text-xs pl-0.5"></i>
-                    </button>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <?php endif; ?>
+            <!-- Attendance Summary -->
+            <div class="w-full max-w-2xl bg-white dark:bg-zinc-800 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-700 p-6 flex flex-col gap-6">
+                <div class="flex flex-row items-center justify-between w-full">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-chart-pie text-2xl text-zinc-900 dark:text-white"></i>
+                        <h1 class="text-xl font-bold text-zinc-900 dark:text-white">Attendance Summary</h1>
+                    </div>
+                    <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                        Total: <span id="sum-total-hours" class="text-zinc-900 dark:text-white font-bold">0.00 Hours</span>
+                    </p>
+                </div>
+                <div class="flex flex-col gap-5 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-700/50">
+                    <div class="flex flex-row items-start justify-between w-full">
+                        <div class="flex flex-col">
+                            <h2 id="sum-day" class="text-xl font-bold text-zinc-900 dark:text-white">Monday</h2>
+                            <p id="sum-times" class="text-sm font-medium text-zinc-500 dark:text-zinc-400 mt-1">08:00 AM - 05:00 PM</p>
+                        </div>
+                        <div id="sum-badge" class="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400 text-sm font-bold rounded-full">
+                            Complete
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mt-2">
+                        <div class="flex flex-col">
+                            <h3 class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">OJT</h3>
+                            <p class="text-base font-medium text-zinc-900 dark:text-white mt-1">
+                                <?= $_SESSION['current_user']['lastName'] . ', ' . $_SESSION['current_user']['firstName'] . ' ' . substr($_SESSION['current_user']['middleName'], 0, 1) . '.' ?>
+                            </p>
+                        </div>
+                        <div class="flex flex-col">
+                            <h3 class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Attendance ID</h3>
+                            <p id="sum-att-id" class="text-base font-medium text-zinc-900 dark:text-white mt-1">#4</p>
+                        </div>
+                        <div class="flex flex-col">
+                            <h3 class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Entry Point</h3>
+                            <p id="sum-entry-point" class="text-base font-medium text-zinc-900 dark:text-white mt-1">--</p>
+                        </div>
+                        <div class="flex flex-col">
+                            <h3 class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Exit Point</h3>
+                            <p id="sum-exit-point" class="text-base font-medium text-zinc-900 dark:text-white mt-1">--</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2 mt-2">
+                        <div class="flex justify-between items-end w-full">
+                            <h3 class="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Completion</h3>
+                            <span id="sum-percent" class="text-sm font-bold text-zinc-900 dark:text-white">100%</span>
+                        </div>
+                        <div class="w-full h-3 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+                            <div id="sum-bar" class="h-full bg-accent transition-all w-[100%]"></div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-4 w-full mt-2 bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 p-4 rounded-xl">
+                        <div class="flex flex-col gap-1">
+                            <h3 class="text-xs font-bold text-yellow-800 dark:text-yellow-500 uppercase tracking-wider">Journal Entry</h3>
+                            <p id="sum-journal" class="text-sm font-medium text-zinc-700 dark:text-zinc-300 leading-relaxed break-words whitespace-pre-wrap max-h-32 overflow-y-auto thin-scrollbar pr-2">
+                                Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam, quod.
+                            </p>
+                        </div>
+                        <button id="add-journal-btn" class="w-full py-2.5 bg-accent text-white font-bold rounded-lg cursor-pointer hover:bg-accent-hover hover:shadow-md transition-all active:scale-95">
+                            Add Journal Entry
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
 <script>
-(function() {
-    // Clean up previous timer interval if re-navigating
-    if (window._attTimerInterval) {
-        clearInterval(window._attTimerInterval);
-        window._attTimerInterval = null;
-    }
-
-    const API_URL = '../server/api/attendance_api.php';
-    const MAX_HOURS = 8;
-    const MAX_MS = MAX_HOURS * 3600000;
-
-    // ── Journal Modal Function ──
-    window.openJournalModal = function(recordId, currentText = '') {
-        Swal.fire({
-            title: 'Daily Journal',
-            input: 'textarea',
-            inputLabel: 'What did you achieve or learn today?',
-            inputValue: currentText,
-            inputPlaceholder: 'Start typing here...',
-            inputAttributes: { 'aria-label': 'Type your journal entry here' },
-            showCancelButton: true,
-            confirmButtonText: 'Save Entry',
-            confirmButtonColor: 'var(--color-accent)',
-            showLoaderOnConfirm: true,
-            background: document.documentElement.classList.contains('dark') ? '#27272a' : '#fff',
-            color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
-            preConfirm: async (text) => {
-                try {
-                    const fd = new FormData();
-                    fd.append('action', 'save_journal');
-                    fd.append('record_id', recordId);
-                    fd.append('journal', text);
-                    const res = await fetch(API_URL, { method: 'POST', body: fd });
-                    if (!res.ok) throw new Error(res.statusText);
-                    const data = await res.json();
-                    if (!data.success) throw new Error(data.message);
-                    return data;
-                } catch (error) {
-                    Swal.showValidationMessage(`Request failed: ${error}`);
-                }
-            },
-            allowOutsideClick: () => !Swal.isLoading()
-        }).then((result) => {
-            if (result.isConfirmed) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Saved!',
-                    text: 'Your journal entry has been saved.',
-                    timer: 1500,
-                    showConfirmButton: false,
-                    background: document.documentElement.classList.contains('dark') ? '#27272a' : '#fff',
-                    color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
-                }).then(() => {
-                    if (typeof navigateTo === "function") navigateTo("attendance");
-                    else location.reload();
+(() => {
+    function initAttendanceCards() {
+        const cards = document.querySelectorAll('.att-card');
+        
+        cards.forEach(card => {
+            card.addEventListener('click', function() {
+                // Remove active state from all
+                cards.forEach(c => {
+                    c.classList.remove('bg-accent/20', 'border-accent', 'border-solid');
+                    // If not Complete, restore its dashed border style
+                    if (c.dataset.statusText !== 'Complete') {
+                        c.classList.add('bg-zinc-200', 'dark:bg-zinc-700', 'border-dashed', 'border-zinc-400', 'dark:border-zinc-500');
+                    }
                 });
-            }
+
+                // Add active state to clicked card
+                this.classList.remove('bg-zinc-200', 'dark:bg-zinc-700', 'border-dashed', 'border-zinc-400', 'dark:border-zinc-500');
+                this.classList.add('bg-accent/20', 'border-accent', 'border-solid');
+
+                // Update Summary Panel
+                document.getElementById('sum-day').innerText = this.dataset.date;
+                document.getElementById('sum-times').innerText = this.dataset.times;
+                
+                const badge = document.getElementById('sum-badge');
+                badge.innerText = this.dataset.statusText;
+                badge.className = `px-3 py-1 text-sm font-bold rounded-full ${this.dataset.statusBg} ${this.dataset.statusTxt}`;
+
+                document.getElementById('sum-att-id').innerText = '#' + this.dataset.id;
+                
+                const hours = parseFloat(this.dataset.hours || 0);
+                const percent = Math.min(100, Math.round((hours / 8) * 100));
+                document.getElementById('sum-percent').innerText = percent + '%';
+                document.getElementById('sum-bar').style.width = percent + '%';
+                
+                document.getElementById('sum-total-hours').innerText = parseFloat(this.dataset.hours || 0).toFixed(2) + ' Hours';
+
+                document.getElementById('sum-entry-point').innerText = this.dataset.inLocation;
+                document.getElementById('sum-exit-point').innerText = this.dataset.outLocation;
+
+                document.getElementById('sum-journal').innerText = this.dataset.journal;
+            });
         });
+
+        // Trigger click on first card initially
+        if (cards.length > 0) {
+            cards[0].click();
+        }
     }
 
-    // ── Lunch Break State (localStorage) ──
-    function getLunchState() {
-        const raw = localStorage.getItem('att_lunch');
-        if (!raw) return { onLunch: false, lunchStartMs: 0, totalLunchMs: 0 };
-        try { return JSON.parse(raw); }
-        catch { return { onLunch: false, lunchStartMs: 0, totalLunchMs: 0 }; }
-    }
+    // Call init if loaded directly or via SPA router
+    initAttendanceCards();
 
-    function setLunchState(state) {
-        localStorage.setItem('att_lunch', JSON.stringify(state));
-    }
+    // Setup Live Timer
+    window.attendanceData = {
+        todayTimeIn: <?= json_encode($todayTimeIn) ?>,
+        todayTimeOut: <?= json_encode($todayTimeOut) ?>,
+        todayHours: <?= json_encode($todayHours) ?>
+    };
 
-    function clearLunchState() {
-        localStorage.removeItem('att_lunch');
-    }
+    function initLiveTimer() {
+        const el = document.getElementById('live-timer');
+        if (!el) return;
 
-    // ── Timer ──
-    window.initTrackers = function() {
-        const trackers = document.querySelectorAll('.tracker-timer');
-        if (trackers.length === 0) return;
-
-        trackers.forEach(tracker => {
-            const ts = tracker.getAttribute('data-timestamp');
-            const timeInDate = new Date(ts);
-            if (isNaN(timeInDate.getTime())) return;
-
-            if (window._attTimerInterval) clearInterval(window._attTimerInterval);
-
-            window._attTimerInterval = setInterval(() => {
-                const lunch = getLunchState();
-                const now = Date.now();
-
-                // If currently on lunch, freeze the displayed time
-                let totalLunchMs = lunch.totalLunchMs || 0;
-                if (lunch.onLunch && lunch.lunchStartMs) {
-                    totalLunchMs += (now - lunch.lunchStartMs);
-                }
-
-                let elapsedMs = now - timeInDate.getTime() - totalLunchMs;
-                if (elapsedMs < 0) elapsedMs = 0;
-
-                // Cap at 8 hours
-                if (elapsedMs > MAX_MS) elapsedMs = MAX_MS;
-
-                const hrs  = Math.floor(elapsedMs / 3600000);
-                const mins = Math.floor((elapsedMs % 3600000) / 60000);
-                const secs = Math.floor((elapsedMs % 60000) / 1000);
-
-                const fmt = n => n.toString().padStart(2, '0');
-                tracker.textContent = `${fmt(hrs)}:${fmt(mins)}:${fmt(secs)}`;
-
-                // Visual warning when approaching 8 hours
-                if (elapsedMs >= MAX_MS) {
-                    tracker.classList.add('text-red-400');
-                    tracker.classList.remove('text-accent');
-                }
-            }, 1000);
-        });
-    }
-
-    // ── Lunch Button Logic ──
-    const lunchBtn = document.getElementById('btn-lunch');
-    if (lunchBtn) {
-        // Restore state on load
-        const lunch = getLunchState();
-        if (lunch.onLunch) {
-            lunchBtn.innerHTML = '<i class="fa-solid fa-utensils"></i><span>End Lunch</span>';
-            lunchBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'shadow-yellow-500/20');
-            lunchBtn.classList.add('bg-amber-600', 'hover:bg-amber-700', 'shadow-amber-600/20', 'animate-pulse');
+        if (!window.attendanceData.todayTimeIn) {
+            el.innerText = '00:00:00';
+            return;
         }
 
-        lunchBtn.addEventListener('click', () => {
-            const lunch = getLunchState();
+        // Running Live Timer
+        const timeInStr = window.attendanceData.todayTimeIn.replace(' ', 'T');
+        const timeIn = new Date(timeInStr).getTime();
+        
+        if (window.liveTimerInterval) clearInterval(window.liveTimerInterval);
 
-            if (!lunch.onLunch) {
-                // START lunch
-                setLunchState({
-                    onLunch: true,
-                    lunchStartMs: Date.now(),
-                    totalLunchMs: lunch.totalLunchMs || 0
-                });
-                lunchBtn.innerHTML = '<i class="fa-solid fa-utensils"></i><span>End Lunch</span>';
-                lunchBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'shadow-yellow-500/20');
-                lunchBtn.classList.add('bg-amber-600', 'hover:bg-amber-700', 'shadow-amber-600/20', 'animate-pulse');
-
-                // Disable time-out during lunch
-                const timeBtn = document.getElementById('btn-time-action');
-                if (timeBtn) {
-                    timeBtn.disabled = true;
-                    timeBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                    timeBtn.classList.remove('hover:scale-105');
-                }
-
-                Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, timerProgressBar: true })
-                    .fire({ icon: 'info', title: 'Lunch break started. Timer paused.' });
-            } else {
-                // END lunch
-                const elapsed = Date.now() - lunch.lunchStartMs;
-                setLunchState({
-                    onLunch: false,
-                    lunchStartMs: 0,
-                    totalLunchMs: (lunch.totalLunchMs || 0) + elapsed
-                });
-                lunchBtn.innerHTML = '<i class="fa-solid fa-utensils"></i><span>Start Lunch</span>';
-                lunchBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'shadow-yellow-500/20');
-                lunchBtn.classList.remove('bg-amber-600', 'hover:bg-amber-700', 'shadow-amber-600/20', 'animate-pulse');
-
-                // Re-enable time-out
-                const timeBtn = document.getElementById('btn-time-action');
-                if (timeBtn) {
-                    timeBtn.disabled = false;
-                    timeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    timeBtn.classList.add('hover:scale-105');
-                }
-
-                const mins = Math.round(elapsed / 60000);
-                Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, timerProgressBar: true })
-                    .fire({ icon: 'success', title: `Lunch break ended. (${mins} min)` });
+        window.liveTimerInterval = setInterval(() => {
+            let diffMs = Date.now() - timeIn;
+            if (diffMs < 0) diffMs = 0;
+            let diffSecs = Math.floor(diffMs / 1000);
+            
+            // Cap at 8 hours (28800 seconds)
+            if (diffSecs > 28800) {
+                diffSecs = 28800; // 8 hours tight cap
+                clearInterval(window.liveTimerInterval);
             }
-        });
+
+            const h = Math.floor(diffSecs / 3600).toString().padStart(2, '0');
+            const m = Math.floor((diffSecs % 3600) / 60).toString().padStart(2, '0');
+            const s = Math.floor(diffSecs % 60).toString().padStart(2, '0');
+            el.innerText = `${h}:${m}:${s}`;
+        }, 1000);
     }
 
-    // ── Time In / Time Out Button Logic ──
-    const timeBtn = document.getElementById('btn-time-action');
-    if (timeBtn) {
-        // If currently on lunch, disable time-out on load
-        const lunchOnLoad = getLunchState();
-        if (lunchOnLoad.onLunch && timeBtn.dataset.action === 'time_out') {
-            timeBtn.disabled = true;
-            timeBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            timeBtn.classList.remove('hover:scale-105');
-        }
+    initLiveTimer();
 
-        timeBtn.addEventListener('click', async () => {
-            const action = timeBtn.dataset.action;
-            if (timeBtn.disabled) return;
+    // Setup Journal Add function
+    const btn = document.getElementById('add-journal-btn');
+    if (btn) {
+        // Prevent multi-bindings if SPA load fires this multiple times
+        btn.replaceWith(btn.cloneNode(true)); 
+        document.getElementById('add-journal-btn').addEventListener('click', async function() {
+            const attIdText = document.getElementById('sum-att-id').innerText;
+            const attId = parseInt(attIdText.replace('#', ''));
+            if (!attId) {
+                Swal.fire('Error', 'Please select an attendance record first.', 'error');
+                return;
+            }
 
-            if (action === 'time_in') {
-                // Clear any previous lunch state
-                clearLunchState();
+            const currentJournal = document.getElementById('sum-journal').innerText;
+            const isDefault = currentJournal === 'No journal entry available for this log.';
+            
+            const { value: text } = await Swal.fire({
+                title: 'Journal Entry',
+                input: 'textarea',
+                inputLabel: 'What did you do on this day?',
+                inputValue: !isDefault ? currentJournal : '',
+                showCancelButton: true
+            });
 
+            if (text !== undefined) {
                 try {
-                    const fd = new FormData();
-                    fd.append('action', 'time_in');
-                    const res = await fetch(API_URL, { method: 'POST', body: fd });
-                    const data = await res.json();
-
-                    if (data.success) {
-                        Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, timerProgressBar: true })
-                            .fire({ icon: 'success', title: data.message })
-                            .then(() => {
-                                // Reload the attendance page via SPA
-                                if (typeof navigateTo === 'function') {
-                                    navigateTo('attendance');
-                                } else {
-                                    location.reload();
-                                }
-                            });
+                    const req = await fetch('http://localhost/attendance-tracker-ojt/server/api/update_journal_api.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ att_id: attId, journal: text })
+                    });
+                    const res = await req.json();
+                    if (res.success) {
+                        Swal.fire('Saved!', 'Journal entry updated successfully.', 'success');
+                        
+                        const finalText = text.trim() ? text.trim() : 'No journal entry available for this log.';
+                        document.getElementById('sum-journal').innerText = finalText;
+                        
+                        const activeCard = document.querySelector(`.att-card[data-id="${attId}"]`);
+                        if (activeCard) {
+                            activeCard.dataset.journal = finalText;
+                        }
                     } else {
-                        Swal.fire({ icon: 'error', title: 'Oops!', text: data.message });
+                        Swal.fire('Error', res.message || 'Failed to save.', 'error');
                     }
-                } catch (err) {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong. Please try again.' });
-                }
-
-            } else if (action === 'time_out') {
-                // Confirm before timing out
-                const result = await Swal.fire({
-                    title: 'Time Out?',
-                    text: 'Are you sure you want to time out? This action cannot be undone.',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#ef4444',
-                    cancelButtonColor: '#71717a',
-                    confirmButtonText: 'Yes, Time Out',
-                    cancelButtonText: 'Cancel',
-                    background: document.documentElement.classList.contains('dark') ? '#27272a' : '#fff',
-                    color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
-                });
-
-                if (!result.isConfirmed) return;
-
-                try {
-                    // Calculate total lunch minutes from localStorage
-                    const lunch = getLunchState();
-                    let totalLunchMs = lunch.totalLunchMs || 0;
-                    if (lunch.onLunch && lunch.lunchStartMs) {
-                        totalLunchMs += (Date.now() - lunch.lunchStartMs);
-                    }
-                    const lunchMinutes = Math.round(totalLunchMs / 60000);
-
-                    const fd = new FormData();
-                    fd.append('action', 'time_out');
-                    fd.append('lunchMinutes', lunchMinutes);
-                    const res = await fetch(API_URL, { method: 'POST', body: fd });
-                    const data = await res.json();
-
-                    if (data.success) {
-                        clearLunchState();
-                        if (window._attTimerInterval) clearInterval(window._attTimerInterval);
-
-                        Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true })
-                            .fire({ icon: 'success', title: (() => { const h = Math.floor(data.hours); const m = Math.round((data.hours - h) * 60); return `${data.message} (${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')} hrs logged)`; })() })
-                            .then(() => {
-                                if (typeof navigateTo === 'function') {
-                                    navigateTo('attendance');
-                                } else {
-                                    location.reload();
-                                }
-                            });
-                    } else {
-                        Swal.fire({ icon: 'error', title: 'Oops!', text: data.message });
-                    }
-                } catch (err) {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong. Please try again.' });
+                } catch (e) {
+                    Swal.fire('Error', 'Network error. See console.', 'error');
+                    console.error(e);
                 }
             }
         });
     }
-
-    // Run trackers immediately (document is already loaded during SPA nav)
-    initTrackers();
 })();
 </script>

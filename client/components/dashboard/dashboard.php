@@ -293,18 +293,16 @@
                         </button>
                     </div>
                 <?php else: ?>
-                    <div class="flex flex-row items-center justify-between w-full h-20 bg-zinc-200 dark:bg-zinc-700 shadow-md rounded-4xl px-5 py-3 border-l-4 <?php echo $hasJournalToday ? 'border-green-500' : 'border-yellow-500'; ?>">
-                        <div class="flex flex-col items-center justify-between">
-                            <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                                <i class="fa-solid <?php echo $hasJournalToday ? 'fa-check text-green-500' : 'fa-file-pen dark:text-white text-zinc-900'; ?> text-lg"></i>
-                                <p class="text-zinc-900 dark:text-white text-lg font-medium"><?php echo $hasJournalToday ? 'Entry Saved' : 'Pending Entry'; ?></p>
-                                <div class="h-4 w-0 border border-zinc-900 dark:border-white/50 rounded-full"></div>
-                                <p class="dark:text-white/70 text-zinc-900 text-sm font-medium">What did you learn today?</p>
+                    <div class="flex flex-row items-center justify-between w-full h-auto min-h-20 py-4 bg-zinc-200 dark:bg-zinc-700 shadow-md rounded-4xl px-5 border-l-4 <?php echo $hasJournalToday ? 'border-green-500' : 'border-yellow-500'; ?>">
+                        <div class="flex flex-col items-start justify-center flex-1 pr-4 max-w-full overflow-hidden">
+                            <div class="flex flex-row items-center justify-start w-full h-auto gap-3 pb-1">
+                                <i class="fa-solid <?php echo $hasJournalToday ? 'fa-check text-green-500' : 'fa-file-pen dark:text-white text-zinc-900'; ?> text-lg shrink-0"></i>
+                                <p class="text-zinc-900 dark:text-white text-lg font-medium shrink-0"><?php echo $hasJournalToday ? 'Entry Saved' : 'Pending Entry'; ?></p>
+                                <div class="h-4 w-0 border border-zinc-900 dark:border-white/50 rounded-full shrink-0"></div>
+                                <p class="dark:text-white/70 text-zinc-900 text-sm font-medium shrink-0">What did you learn today?</p>
                             </div>
-                            <div class="flex flex-row items-center justify-start w-full h-auto gap-3">
-                                <p class="dark:text-white/70 text-zinc-900 text-sm font-medium truncate w-[400px]">
-                                    <?php echo $hasJournalToday ? htmlspecialchars($journalText) : 'You have not submitted a journal entry for today yet.'; ?>
-                                </p>
+                            <div class="flex flex-row items-start justify-start w-full h-auto gap-3 mt-1">
+                                <p class="dark:text-white/70 text-zinc-900 text-sm font-medium break-words whitespace-pre-wrap max-h-24 overflow-y-auto thin-scrollbar pr-2 w-full"><?php echo $hasJournalToday ? htmlspecialchars($journalText) : 'You have not submitted a journal entry for today yet.'; ?></p>
                             </div>
                         </div>
                         <button onclick="openJournalModal(<?php echo $todayRecordId; ?>, <?php echo htmlspecialchars(json_encode($journalText)); ?>)" class="flex items-center justify-center px-5 h-10 rounded-full bg-accent/20 hover:bg-accent hover:scale-105 hover:shadow-lg cursor-pointer transition-all group/button gap-2">
@@ -339,12 +337,16 @@
             color: document.documentElement.classList.contains('dark') ? '#fff' : '#000',
             preConfirm: async (text) => {
                 try {
-                    const fd = new FormData();
-                    fd.append('action', 'save_journal');
-                    fd.append('record_id', recordId);
-                    fd.append('journal', text);
+                    const payload = {
+                        att_id: recordId,
+                        journal: text
+                    };
                     
-                    const res = await fetch('../server/api/attendance_api.php', { method: 'POST', body: fd });
+                    const res = await fetch('../server/api/update_journal_api.php', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload) 
+                    });
                     if (!res.ok) throw new Error(res.statusText);
                     
                     const data = await res.json();

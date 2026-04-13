@@ -14,7 +14,9 @@ CREATE TABLE att_track_users (
     gmail NVARCHAR(255),
 	position NVARCHAR(50),
 	required_hours DECIMAL(5, 2),
-	accumulated_hours DECIMAL(5, 2)
+	accumulated_hours DECIMAL(5, 2),
+	in_location NVARCHAR(255),
+	out_location NVARCHAR(255)
 )
 
 CREATE TABLE att_track_login_credentials (
@@ -38,3 +40,6 @@ CREATE TABLE att_track_attendance (
 	hours DECIMAL(5, 2),
 	journal NVARCHAR(MAX)
 )
+
+-- INSERT INTO hik_logs_staging (id, emp_id, log_datetime, log_date, log_time, device_name, device_sn, first_name, last_name, processed)
+-- VALUES (999, 41882, GETDATE(), CAST(GETDATE() AS DATE), CAST(GETDATE() AS TIME), 'GO Entrance Door Access', 'FX6367196', 'Vince', 'Emanuelle Salenga', 0)
